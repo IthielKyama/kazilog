@@ -8,22 +8,6 @@ KaziLog is a GPS-enabled digital logbook system for industrial attachment manage
 - `mobile-app/`: Expo React Native student app for GPS-backed daily logging, offline queueing, and submission history.
 - `web-dashboard/`: React + Vite dashboard for admins, supervisors, and assessors.
 
-## Current Status
-
-The codebase is already beyond prototype level in a few important areas:
-
-- Student login, forced password change, active-session fetch, daily log submission, GPS verification, and offline queue sync are implemented.
-- Supervisor review and assessor grading flows are implemented against live backend endpoints.
-- Core backend API routes, models, middleware, geofence logic, and automated backend tests are in place.
-
-The project is still incomplete in a few areas:
-
-- The admin dashboard is only partially wired. User registration is live, but company registration is still mocked in the UI and session creation has no finished form yet.
-- Some frontend/backend URLs are still hardcoded for local development.
-- Email delivery currently uses Ethereal test inboxes rather than a production mail provider.
-
-For a full assessment and phased roadmap, see [CODEBASE_ASSESSMENT.md](./CODEBASE_ASSESSMENT.md).
-
 ## Prerequisites
 
 - Node.js 20+ recommended
@@ -38,7 +22,7 @@ There is no root workspace script yet, so install and run each app separately.
 ### 1. Clone and install dependencies
 
 ```powershell
-git clone <your-repo-url>
+git clone <this-repo-url>
 cd KaziLog
 
 cd backend
@@ -89,12 +73,6 @@ npm run dev
 
 Open `http://localhost:5173`.
 
-Notes:
-
-- The dashboard currently assumes the backend is running at `http://localhost:5000`.
-- Login, password reset, forced password change, supervisor review, assessor grading, and admin user registration are connected.
-- Company creation and session creation still need more UI work, so some admin setup is better done through the API for now.
-
 ### 4. Start the mobile app
 
 The mobile app reads `EXPO_PUBLIC_API_BASE_URL` if provided. If not provided, it falls back to:
@@ -124,7 +102,7 @@ npm run web
 2. Run `npm run create-admin` inside `backend`.
 3. Start `web-dashboard` and sign in as the admin.
 4. Register supervisor, assessor, and student accounts from the admin dashboard.
-5. Create companies and attachment sessions through the backend API until the admin UI is completed.
+5. Create companies and attachment sessions.
 6. Sign into the mobile app as the student and submit logs from within the configured geofence.
 7. Sign into the dashboard as the supervisor to approve or reject logs.
 8. Sign into the dashboard as the assessor to view assigned students and award final grades.
@@ -159,23 +137,4 @@ cd web-dashboard
 npm run build
 ```
 
-## Known Gaps
 
-- No completed admin workflow for company and session setup in the dashboard UI yet
-- No frontend automated tests yet
-- No background worker or retry strategy beyond device-triggered offline sync
-- No production mail service integration yet
-- No deployment, HTTPS, audit logging, or observability setup yet
-
-## Research Alignment
-
-This repository maps directly to the project goal of digitizing industrial attachment evaluation through:
-
-- secure multi-role access
-- GPS-backed attendance validation
-- digital daily log submission
-- supervisor review
-- assessor grading
-- reduced dependence on physical paper logbooks
-
-The detailed traceability between the study requirements and the current implementation is documented in [CODEBASE_ASSESSMENT.md](./CODEBASE_ASSESSMENT.md).
