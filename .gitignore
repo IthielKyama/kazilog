@@ -1,0 +1,21 @@
+# Node modules
+node_modules/
+npm-debug.log
+
+# Environments
+.env
+
+# Mobile App (Expo)
+.expo/
+.expo-shared/
+assets/
+app.json
+
+# Web Dashboard (Vite)
+dist/
+dist-ssr/
+*.local
+
+# OS
+.DS_Store
+Thumbs.db
