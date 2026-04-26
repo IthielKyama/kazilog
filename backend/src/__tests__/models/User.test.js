@@ -178,12 +178,12 @@ describe('User Model', () => {
       const original = await User.findById(user._id).select('+password');
       const originalHash = original.password;
 
-      original.password = 'newpassword456';
+      original.password = 'Newpassword4!';
       await original.save();
 
       const updated = await User.findById(user._id).select('+password');
       expect(updated.password).not.toBe(originalHash);
-      expect(updated.password).not.toBe('newpassword456');
+      expect(updated.password).not.toBe('Newpassword4!');
     });
   });
 
