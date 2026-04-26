@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
+import PasswordField from '../components/PasswordField';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -88,12 +89,13 @@ export default function Login() {
                 </Link>
               </div>
               <div className="mt-1">
-                <input
-                  type="password"
+                <PasswordField
+                  label="Password"
                   required
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="appearance-none block w-full px-4 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand sm:text-sm transition-all"
+                  autoComplete="current-password"
+                  showLabel={false}
                 />
               </div>
             </div>

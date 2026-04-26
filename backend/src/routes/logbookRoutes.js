@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
   submitLog,
+  getActiveStudentSession,
   getStudentLogs,
   getSupervisorLogs,
   reviewLog
@@ -13,6 +14,7 @@ const { protect, authorize } = require('../middlewares/authMiddleware');
 router.use(protect);
 
 // Student routes
+router.get('/session/active', authorize('student'), getActiveStudentSession);
 router.post('/', authorize('student'), submitLog);
 router.get('/student', authorize('student'), getStudentLogs);
 

@@ -4,6 +4,30 @@ const AttachmentSession = require('../models/AttachmentSession');
 const Company = require('../models/Company');
 const { calculateDistance } = require('../utils/geofence');
 
+// @desc    Get the active attachment session for the logged-in student
+// @route   GET /api/logs/session/active
+// @access  Private (Student only)
+exports.getActiveStudentSession = asyncHandler(async (req, res) => {
+  const session = await AttachmentSession.findOne({
+    student: req.user.id,
+    isActive: true,
+  })
+    .populate('company', 'name address location allowedRadiusMeters')
+    .populate('supervisor', 'name email')
+    .populate('assessor', 'name email')
+    .sort('-createdAt');
+
+  if (!session) {
+    res.status(404);
+    throw new Error('No active attachment session found for this student');
+  }
+
+  res.status(200).json({
+    success: true,
+    data: session,
+  });
+});
+
 // @desc    Submit a daily logbook entry with GPS verification
 // @route   POST /api/logs
 // @access  Private (Student only)

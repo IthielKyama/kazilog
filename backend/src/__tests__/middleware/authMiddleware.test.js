@@ -31,7 +31,7 @@ const createTestUser = async (role = 'student') => {
   const user = await User.create({
     name: 'Test User',
     email: `${role}-${Date.now()}@test.com`,
-    password: 'password123',
+    password: 'Password1!',
     role,
     registrationNumber: role === 'student' ? 'STU-001' : undefined,
   });
