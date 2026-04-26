@@ -1,0 +1,27 @@
+const express = require('express');
+const router = express.Router();
+const {
+  createCompany,
+  getCompanies,
+  getUsers,
+  createSession
+} = require('../controllers/adminController');
+
+const { protect, authorize } = require('../middlewares/authMiddleware');
+
+// Protect and restrict all admin routes
+router.use(protect);
+// Temporarily allowing 'supervisor' or 'assessor' to act as admin for easier testing
+router.use(authorize('admin', 'supervisor', 'assessor'));
+
+router.route('/companies')
+  .post(createCompany)
+  .get(getCompanies);
+
+router.route('/users')
+  .get(getUsers);
+
+router.route('/sessions')
+  .post(createSession);
+
+module.exports = router;
