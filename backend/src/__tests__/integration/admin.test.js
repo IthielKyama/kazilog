@@ -29,7 +29,7 @@ afterAll(async () => {
 const makeUser = async (role) => {
   const u = await User.create({
     name: `${role}`, email: `${role}-${Date.now()}@t.com`,
-    password: 'password123', role,
+    password: 'Password1!', role,
     registrationNumber: role === 'student' ? 'STU-1' : undefined,
   });
   return { user: u, token: jwt.sign({ id: u._id }, process.env.JWT_SECRET, { expiresIn: '1h' }) };

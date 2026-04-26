@@ -10,13 +10,13 @@ const userData = {
   admin: {
     name: 'Test Admin',
     email: 'admin@test.com',
-    password: 'password123',
+    password: 'Password1!',
     role: 'admin',
   },
   student: {
     name: 'Test Student',
     email: 'student@test.com',
-    password: 'password123',
+    password: 'Password1!',
     role: 'student',
     registrationNumber: 'STU-2026-001',
     department: 'Computer Science',
@@ -24,13 +24,13 @@ const userData = {
   supervisor: {
     name: 'Test Supervisor',
     email: 'supervisor@test.com',
-    password: 'password123',
+    password: 'Password1!',
     role: 'supervisor',
   },
   assessor: {
     name: 'Test Assessor',
     email: 'assessor@test.com',
-    password: 'password123',
+    password: 'Password1!',
     role: 'assessor',
   },
 };

@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { MapPin, KeyRound, LogOut } from 'lucide-react';
+import { MapPin, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import { isStrongPassword, PASSWORD_POLICY_MESSAGE } from '../utils/passwordPolicy';
+import PasswordField from '../components/PasswordField';
 
 const getDefaultRoute = (role) => {
   if (role === 'admin') return '/admin';
@@ -100,61 +101,31 @@ export default function ForceChangePassword() {
           </div>
 
           <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label className="block text-sm font-medium text-slate-700">
-                Current Password
-              </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <KeyRound size={16} />
-                </div>
-                <input
-                  type="password"
-                  required
-                  value={currentPassword}
-                  onChange={e => setCurrentPassword(e.target.value)}
-                  className="appearance-none block w-full pl-10 px-4 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand sm:text-sm transition-all"
-                />
-              </div>
-            </div>
+            <PasswordField
+              label="Current Password"
+              required
+              value={currentPassword}
+              onChange={e => setCurrentPassword(e.target.value)}
+              autoComplete="current-password"
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700">
-                New Password
-              </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <KeyRound size={16} />
-                </div>
-                <input
-                  type="password"
-                  required
-                  minLength={8}
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
-                  className="appearance-none block w-full pl-10 px-4 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand sm:text-sm transition-all"
-                />
-              </div>
-            </div>
+            <PasswordField
+              label="New Password"
+              required
+              minLength={8}
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              autoComplete="new-password"
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700">
-                Confirm New Password
-              </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <KeyRound size={16} />
-                </div>
-                <input
-                  type="password"
-                  required
-                  minLength={8}
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  className="appearance-none block w-full pl-10 px-4 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand sm:text-sm transition-all"
-                />
-              </div>
-            </div>
+            <PasswordField
+              label="Confirm New Password"
+              required
+              minLength={8}
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              autoComplete="new-password"
+            />
 
             <div className="space-y-3">
               <button

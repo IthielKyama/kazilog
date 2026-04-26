@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { MapPin, KeyRound, Check } from 'lucide-react';
+import { MapPin, Check } from 'lucide-react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { isStrongPassword, PASSWORD_POLICY_MESSAGE } from '../utils/passwordPolicy';
+import PasswordField from '../components/PasswordField';
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('');
@@ -81,43 +82,23 @@ export default function ResetPassword() {
             </div>
           ) : (
             <form className="space-y-6" onSubmit={handleSubmit}>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">
-                  New Password
-                </label>
-                <div className="mt-1 relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <KeyRound size={16} />
-                  </div>
-                  <input
-                    type="password"
-                    required
-                    minLength={8}
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    className="appearance-none block w-full pl-10 px-4 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand sm:text-sm transition-all"
-                  />
-                </div>
-              </div>
+              <PasswordField
+                label="New Password"
+                required
+                minLength={8}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                autoComplete="new-password"
+              />
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700">
-                  Confirm New Password
-                </label>
-                <div className="mt-1 relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <KeyRound size={16} />
-                  </div>
-                  <input
-                    type="password"
-                    required
-                    minLength={8}
-                    value={confirmPassword}
-                    onChange={e => setConfirmPassword(e.target.value)}
-                    className="appearance-none block w-full pl-10 px-4 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand sm:text-sm transition-all"
-                  />
-                </div>
-              </div>
+              <PasswordField
+                label="Confirm New Password"
+                required
+                minLength={8}
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+              />
 
               <div>
                 <button

@@ -31,7 +31,7 @@ describe('User Model', () => {
       const user = await User.create({
         name: 'John Doe',
         email: 'john@test.com',
-        password: 'password123',
+        password: 'Password1!',
         role: 'student',
         registrationNumber: 'STU-001',
       });
@@ -48,7 +48,7 @@ describe('User Model', () => {
       const user = await User.create({
         name: 'Default Role',
         email: 'default@test.com',
-        password: 'password123',
+        password: 'Password1!',
         registrationNumber: 'STU-002',
       });
 
@@ -59,7 +59,7 @@ describe('User Model', () => {
       await expect(
         User.create({
           email: 'noname@test.com',
-          password: 'password123',
+          password: 'Password1!',
         })
       ).rejects.toThrow();
     });
@@ -68,7 +68,7 @@ describe('User Model', () => {
       await expect(
         User.create({
           name: 'No Email',
-          password: 'password123',
+          password: 'Password1!',
         })
       ).rejects.toThrow();
     });
@@ -87,7 +87,7 @@ describe('User Model', () => {
         User.create({
           name: 'Bad Email',
           email: 'not-an-email',
-          password: 'password123',
+          password: 'Password1!',
         })
       ).rejects.toThrow();
     });
@@ -96,7 +96,7 @@ describe('User Model', () => {
       await User.create({
         name: 'First User',
         email: 'duplicate@test.com',
-        password: 'password123',
+        password: 'Password1!',
         registrationNumber: 'STU-003',
       });
 
@@ -115,7 +115,7 @@ describe('User Model', () => {
         User.create({
           name: 'Bad Role',
           email: 'badrole@test.com',
-          password: 'password123',
+          password: 'Password1!',
           role: 'superuser',
         })
       ).rejects.toThrow();
@@ -138,13 +138,13 @@ describe('User Model', () => {
       const user = await User.create({
         name: 'Hash Test',
         email: 'hash@test.com',
-        password: 'password123',
+        password: 'Password1!',
         registrationNumber: 'STU-010',
       });
 
       // Fetch with password selected
       const userWithPassword = await User.findById(user._id).select('+password');
-      expect(userWithPassword.password).not.toBe('password123');
+      expect(userWithPassword.password).not.toBe('Password1!');
       expect(userWithPassword.password.startsWith('$2a$')).toBe(true); // bcrypt prefix
     });
 
@@ -152,7 +152,7 @@ describe('User Model', () => {
       const user = await User.create({
         name: 'No Rehash',
         email: 'norehash@test.com',
-        password: 'password123',
+        password: 'Password1!',
         registrationNumber: 'STU-011',
       });
 
@@ -171,7 +171,7 @@ describe('User Model', () => {
       const user = await User.create({
         name: 'Rehash Test',
         email: 'rehash@test.com',
-        password: 'password123',
+        password: 'Password1!',
         registrationNumber: 'STU-012',
       });
 
@@ -192,12 +192,12 @@ describe('User Model', () => {
       const user = await User.create({
         name: 'Match Test',
         email: 'match@test.com',
-        password: 'password123',
+        password: 'Password1!',
         registrationNumber: 'STU-020',
       });
 
       const userWithPassword = await User.findById(user._id).select('+password');
-      const isMatch = await userWithPassword.matchPassword('password123');
+      const isMatch = await userWithPassword.matchPassword('Password1!');
       expect(isMatch).toBe(true);
     });
 
@@ -205,7 +205,7 @@ describe('User Model', () => {
       const user = await User.create({
         name: 'No Match',
         email: 'nomatch@test.com',
-        password: 'password123',
+        password: 'Password1!',
         registrationNumber: 'STU-021',
       });
 
@@ -220,7 +220,7 @@ describe('User Model', () => {
       const user = await User.create({
         name: 'Reset Test',
         email: 'reset@test.com',
-        password: 'password123',
+        password: 'Password1!',
         registrationNumber: 'STU-030',
       });
 
@@ -238,7 +238,7 @@ describe('User Model', () => {
       const user = await User.create({
         name: 'Multi Reset',
         email: 'multireset@test.com',
-        password: 'password123',
+        password: 'Password1!',
         registrationNumber: 'STU-031',
       });
 
@@ -258,7 +258,7 @@ describe('User Model', () => {
       await User.create({
         name: 'Select Test',
         email: 'select@test.com',
-        password: 'password123',
+        password: 'Password1!',
         registrationNumber: 'STU-040',
       });
 
@@ -270,7 +270,7 @@ describe('User Model', () => {
       await User.create({
         name: 'Select Plus',
         email: 'selectplus@test.com',
-        password: 'password123',
+        password: 'Password1!',
         registrationNumber: 'STU-041',
       });
 
