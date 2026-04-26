@@ -1,0 +1,330 @@
+import { useState } from 'react';
+import { Building, MapPin, Save, UserPlus, Briefcase, ChevronDown, Check } from 'lucide-react';
+import toast from 'react-hot-toast';
+import axios from 'axios';
+import { useAuthStore } from '../store/authStore';
+
+// --- Custom Select Component (No Browser Defaults) ---
+const CustomSelect = ({ options, value, onChange, placeholder }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <div 
+        className="w-full px-4 py-2 border border-slate-300 rounded-lg flex items-center justify-between cursor-pointer bg-white focus-within:ring-2 focus-within:ring-brand focus-within:border-brand transition-all"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className={value ? "text-slate-900" : "text-slate-400"}>
+          {value ? options.find(o => o.value === value)?.label : placeholder}
+        </span>
+        <ChevronDown size={18} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </div>
+
+      {isOpen && (
+        <>
+          {/* Invisible backdrop to close dropdown when clicking outside */}
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
+          <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-2">
+            {options.map((option) => (
+              <div 
+                key={option.value}
+                className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors"
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+              >
+                <span className={value === option.value ? "font-medium text-brand" : "text-slate-700"}>
+                  {option.label}
+                </span>
+                {value === option.value && <Check size={16} className="text-brand" />}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+
+export default function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState('company');
+
+  return (
+    <div className="py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in duration-500">
+      <div className="mb-8 flex justify-between items-end">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Admin Configuration</h1>
+          <p className="text-slate-500 mt-2">Manage companies, users, and attachment sessions.</p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-visible">
+        {/* Tabs */}
+        <div className="flex border-b border-slate-200">
+          <button 
+            onClick={() => setActiveTab('company')}
+            className={`flex items-center gap-2 px-6 py-4 font-medium text-sm transition-colors ${activeTab === 'company' ? 'border-b-2 border-brand text-brand' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+          >
+            <Building size={18} /> Register Company
+          </button>
+          <button 
+            onClick={() => setActiveTab('user')}
+            className={`flex items-center gap-2 px-6 py-4 font-medium text-sm transition-colors ${activeTab === 'user' ? 'border-b-2 border-brand text-brand' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+          >
+            <UserPlus size={18} /> Register User
+          </button>
+          <button 
+            onClick={() => setActiveTab('session')}
+            className={`flex items-center gap-2 px-6 py-4 font-medium text-sm transition-colors ${activeTab === 'session' ? 'border-b-2 border-brand text-brand' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+          >
+            <Briefcase size={18} /> Create Session
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        <div className="p-8">
+          {activeTab === 'company' && <CompanyForm />}
+          {activeTab === 'user' && <UserForm />}
+          {activeTab === 'session' && <div className="text-slate-500 text-center py-12">Session creation form coming next.</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Company Form ---
+function CompanyForm() {
+  const [formData, setFormData] = useState({ name: '', address: '', latitude: '', longitude: '', allowedRadiusMeters: 200 });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    // Simulate API Call for now until we set up the admin JWT token
+    try {
+      // In real life: await axios.post('http://localhost:5000/api/admin/companies', formData)
+      await new Promise(resolve => setTimeout(resolve, 800)); 
+      toast.success(`${formData.name} has been registered successfully!`, {
+        icon: '🏢',
+        style: { borderRadius: '10px', background: '#333', color: '#fff' }
+      });
+      setFormData({ name: '', address: '', latitude: '', longitude: '', allowedRadiusMeters: 200 });
+    } catch {
+      toast.error('Failed to register company.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-2xl animate-in fade-in">
+      <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+        <Building className="text-brand" /> Add New Company
+      </h2>
+      
+      <form className="space-y-6" onSubmit={handleSubmit}>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Company Name</label>
+          <input 
+            type="text" 
+            required
+            value={formData.name}
+            onChange={(e) => setFormData({...formData, name: e.target.value})}
+            placeholder="e.g. Safaricom PLC"
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Physical Address</label>
+          <input 
+            type="text" 
+            required
+            value={formData.address}
+            onChange={(e) => setFormData({...formData, address: e.target.value})}
+            placeholder="e.g. Waiyaki Way, Nairobi"
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Latitude</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <MapPin size={16} />
+              </div>
+              <input 
+                type="number" 
+                step="any"
+                required
+                value={formData.latitude}
+                onChange={(e) => setFormData({...formData, latitude: e.target.value})}
+                placeholder="-1.286389"
+                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Longitude</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <MapPin size={16} />
+              </div>
+              <input 
+                type="number" 
+                step="any"
+                required
+                value={formData.longitude}
+                onChange={(e) => setFormData({...formData, longitude: e.target.value})}
+                placeholder="36.817223"
+                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Allowed GPS Radius (Meters)</label>
+          <input 
+            type="number" 
+            required
+            value={formData.allowedRadiusMeters}
+            onChange={(e) => setFormData({...formData, allowedRadiusMeters: parseInt(e.target.value)})}
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+          />
+          <p className="text-xs text-slate-500 mt-2">
+            The maximum distance a student can be from the coordinates to successfully log their attendance.
+          </p>
+        </div>
+
+        <div className="pt-4 border-t border-slate-100">
+          <button 
+            disabled={loading}
+            className="flex items-center justify-center gap-2 w-full md:w-auto px-6 py-2.5 bg-brand text-white rounded-lg font-medium hover:bg-brand-dark transition-colors shadow-sm disabled:opacity-70"
+          >
+            <Save size={18} /> {loading ? 'Saving...' : 'Save Company'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// --- User Form ---
+function UserForm() {
+  const [formData, setFormData] = useState({ name: '', email: '', role: 'student', registrationNumber: '' });
+  const [loading, setLoading] = useState(false);
+  const token = useAuthStore(state => state.token);
+
+  const roleOptions = [
+    { value: 'student', label: 'Student' },
+    { value: 'supervisor', label: 'Industry Supervisor' },
+    { value: 'assessor', label: 'School Assessor' }
+  ];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        role: formData.role,
+      };
+
+      if (formData.role === 'student') {
+        payload.registrationNumber = formData.registrationNumber;
+      }
+
+      await axios.post('http://localhost:5000/api/auth/register', payload, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      toast.success(`${formData.name} registered! A temporary password has been emailed to ${formData.email}.`, {
+        icon: '📧',
+        style: { borderRadius: '10px', background: '#333', color: '#fff' },
+        duration: 5000
+      });
+      setFormData({ name: '', email: '', role: 'student', registrationNumber: '' });
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-2xl animate-in fade-in">
+      <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+        <UserPlus className="text-brand" /> Register New User
+      </h2>
+      
+      <form className="space-y-6" onSubmit={handleSubmit}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+            <input 
+              type="text" 
+              required
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+            <input 
+              type="email" 
+              required
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="relative z-20">
+          <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
+          {/* Custom Select Component replaces native <select> */}
+          <CustomSelect 
+            options={roleOptions} 
+            value={formData.role} 
+            onChange={(val) => setFormData({
+              ...formData,
+              role: val,
+              registrationNumber: val === 'student' ? formData.registrationNumber : '',
+            })} 
+            placeholder="Select a role..."
+          />
+        </div>
+
+        {formData.role === 'student' && (
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Registration Number</label>
+            <input
+              type="text"
+              required
+              value={formData.registrationNumber}
+              onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value })}
+              placeholder="e.g. STU-2026-001"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+            />
+          </div>
+        )}
+
+        <div className="pt-4 border-t border-slate-100 z-0 relative">
+          <button 
+            disabled={loading}
+            className="flex items-center justify-center gap-2 w-full md:w-auto px-6 py-2.5 bg-brand text-white rounded-lg font-medium hover:bg-brand-dark transition-colors shadow-sm disabled:opacity-70"
+          >
+            <Save size={18} /> {loading ? 'Registering...' : 'Register User'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}

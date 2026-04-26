@@ -21,12 +21,35 @@ app.get('/', (req, res) => {
 // Setup future routes here
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/logs', require('./routes/logbookRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/assessor', require('./routes/assessorRoutes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  let message = err.message;
+
+  // Mongoose bad ObjectId (CastError)
+  if (err.name === 'CastError' && err.kind === 'ObjectId') {
+    statusCode = 404;
+    message = 'Resource not found';
+  }
+
+  // Mongoose duplicate key error
+  if (err.code === 11000) {
+    statusCode = 400;
+    const field = Object.keys(err.keyValue)[0];
+    message = `Duplicate value entered for ${field}. That ${field} already exists.`;
+  }
+
+  // Mongoose validation error
+  if (err.name === 'ValidationError') {
+    statusCode = 400;
+    message = Object.values(err.errors).map(val => val.message).join(', ');
+  }
+
   res.status(statusCode).json({
-    message: err.message,
+    message,
     stack: process.env.NODE_ENV === 'production' ? null : err.stack,
   });
 });
