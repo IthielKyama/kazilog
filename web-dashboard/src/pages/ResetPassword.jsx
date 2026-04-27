@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { MapPin, Check } from 'lucide-react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
 import toast from 'react-hot-toast';
 import { isStrongPassword, PASSWORD_POLICY_MESSAGE } from '../utils/passwordPolicy';
 import PasswordField from '../components/PasswordField';
+import { api, extractApiError } from '../lib/api';
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('');
@@ -31,7 +31,7 @@ export default function ResetPassword() {
     setLoading(true);
 
     try {
-      await axios.put(`http://localhost:5000/api/auth/resetpassword/${token}`, { password });
+      await api.put(`/auth/resetpassword/${token}`, { password });
       setSuccess(true);
       toast.success('Password reset successfully!', {
         icon: '🎉',
@@ -41,7 +41,7 @@ export default function ResetPassword() {
       // Auto redirect to login after a few seconds
       setTimeout(() => navigate('/login'), 3000);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Invalid or expired token');
+      toast.error(extractApiError(error, 'Invalid or expired token'));
     } finally {
       setLoading(false);
     }

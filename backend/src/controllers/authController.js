@@ -9,6 +9,9 @@ const {
   PASSWORD_POLICY_MESSAGE,
 } = require('../utils/passwordPolicy');
 
+const getWebDashboardUrl = () =>
+  (process.env.WEB_DASHBOARD_URL || 'http://localhost:5173').replace(/\/+$/, '');
+
 // Generate JWT Token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -177,7 +180,7 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
   await user.save({ validateBeforeSave: false });
 
   // Create reset url
-  const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+  const resetUrl = `${getWebDashboardUrl()}/reset-password/${resetToken}`;
 
   const message = `You are receiving this email because you (or someone else) has requested the reset of a password.\n\nPlease click on the following link to reset your password: \n\n ${resetUrl}`;
 
