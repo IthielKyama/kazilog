@@ -1,6 +1,8 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
+jest.mock('../../utils/sendEmail', () => jest.fn().mockResolvedValue(undefined));
+const sendEmail = require('../../utils/sendEmail');
 const app = require('../../app');
 const User = require('../../models/User');
 const jwt = require('jsonwebtoken');
@@ -14,6 +16,8 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
+  sendEmail.mockClear();
+  delete process.env.WEB_DASHBOARD_URL;
   const collections = mongoose.connection.collections;
   for (const key in collections) {
     await collections[key].deleteMany({});
@@ -297,6 +301,29 @@ describe('GET /api/auth/me', () => {
 // POST /api/auth/forgotpassword
 // ═══════════════════════════════════════════════════════════
 describe('POST /api/auth/forgotpassword', () => {
+  test('uses WEB_DASHBOARD_URL when building the reset link', async () => {
+    process.env.WEB_DASHBOARD_URL = 'http://localhost:5173/';
+
+    await User.create({
+      name: 'Forgot Password User',
+      email: 'forgot@test.com',
+      password: 'Password1!',
+      registrationNumber: 'STU-250',
+    });
+
+    const res = await request(app)
+      .post('/api/auth/forgotpassword')
+      .send({ email: 'forgot@test.com' });
+
+    expect(res.statusCode).toBe(200);
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    expect(sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'forgot@test.com',
+        message: expect.stringContaining('http://localhost:5173/reset-password/'),
+      })
+    );
+  });
 
   test('returns 404 for non-existent email', async () => {
     const res = await request(app)

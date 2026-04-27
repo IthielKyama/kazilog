@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { MapPin, LogIn } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import PasswordField from '../components/PasswordField';
+import { api, extractApiError } from '../lib/api';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -18,7 +18,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const { data } = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+      const { data } = await api.post('/auth/login', { email, password });
       
       // Store in Zustand
       login({
@@ -41,7 +41,7 @@ export default function Login() {
       else navigate('/');
 
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Invalid email or password');
+      toast.error(extractApiError(error, 'Invalid email or password'));
     } finally {
       setLoading(false);
     }
