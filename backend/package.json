@@ -4,9 +4,11 @@
   "description": "Backend API for KaziLog",
   "main": "src/server.js",
   "scripts": {
+    "setup": "npm install",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "create-admin": "node create-admin.js",
+    "bootstrap:admin": "node create-admin.js",
+    "create-admin": "npm run bootstrap:admin",
     "test": "cross-env NODE_ENV=test jest --detectOpenHandles --forceExit"
   },
   "dependencies": {
