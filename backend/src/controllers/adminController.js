@@ -85,3 +85,19 @@ exports.createSession = asyncHandler(async (req, res) => {
     data: session
   });
 });
+
+// @desc    Get all attachment sessions
+// @route   GET /api/admin/sessions
+// @access  Private (Admin only)
+exports.getSessions = asyncHandler(async (req, res) => {
+  const sessions = await AttachmentSession.find({})
+    .populate('student', 'name email')
+    .populate('company', 'name')
+    .populate('supervisor', 'name')
+    .populate('assessor', 'name');
+    
+  res.status(200).json({
+    success: true,
+    data: sessions
+  });
+});
