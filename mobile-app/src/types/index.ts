@@ -56,4 +56,5 @@ export type OfflineLogPayload = {
   latitude: number;
   longitude: number;
   capturedAt: string;
+  imageUri?: string;
 };
