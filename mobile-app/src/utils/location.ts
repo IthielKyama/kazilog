@@ -8,31 +8,41 @@ export const requestForegroundLocation = async () => {
   }
 };
 
-export const getCurrentCoordinates = async () => {
-  await requestForegroundLocation();
+export interface LocationResult {
+  coords?: { latitude: number; longitude: number };
+  error?: string;
+}
 
+export const getResilientCoordinates = async (): Promise<LocationResult> => {
   try {
-    // Wrap in a promise race to prevent infinite hanging (e.g. on web without network)
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    
+    if (status === 'denied') {
+      return { error: 'Location permission denied. Please enable it in your phone settings to verify your workplace.' };
+    }
+
+    // Try balanced accuracy with a strict timeout
     const position = await Promise.race([
       Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 10000))
     ]);
+
+    return { coords: { latitude: position.coords.latitude, longitude: position.coords.longitude } };
     
-    return {
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude,
-    };
-  } catch (error) {
-    // Fallback to last known position if current position fails or times out
-    const lastKnown = await Location.getLastKnownPositionAsync();
-    if (lastKnown) {
-      return {
-        latitude: lastKnown.coords.latitude,
-        longitude: lastKnown.coords.longitude,
-      };
+  } catch (err: any) {
+    if (err.message === 'TIMEOUT') {
+      // Fallback 1: Try Last Known Location (instant)
+      const lastKnown = await Location.getLastKnownPositionAsync();
+      if (lastKnown) {
+        return { coords: { latitude: lastKnown.coords.latitude, longitude: lastKnown.coords.longitude } };
+      }
+      return { error: 'GPS signal is too weak. Please move outside or closer to a window.' };
     }
-    
-    // If all else fails, return null so the screen can decide on a fallback (like workplace location)
-    return null;
+
+    if (!await Location.hasServicesEnabledAsync()) {
+      return { error: 'Your device location services are turned off. Please turn on GPS.' };
+    }
+
+    return { error: 'An unknown error occurred while fetching GPS. Please restart the app.' };
   }
 };
