@@ -5,7 +5,8 @@ const {
   getActiveStudentSession,
   getStudentLogs,
   getSupervisorLogs,
-  reviewLog
+  reviewLog,
+  getSessionLogs
 } = require('../controllers/logbookController');
 
 const { protect, authorize } = require('../middlewares/authMiddleware');
@@ -21,5 +22,8 @@ router.get('/student', authorize('student'), getStudentLogs);
 // Supervisor routes
 router.get('/supervisor', authorize('supervisor'), getSupervisorLogs);
 router.put('/:id/review', authorize('supervisor'), reviewLog);
+
+// Assessor & Supervisor routes
+router.get('/session/:sessionId', authorize('supervisor', 'assessor', 'admin'), getSessionLogs);
 
 module.exports = router;
