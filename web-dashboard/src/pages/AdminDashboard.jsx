@@ -124,7 +124,9 @@ export default function AdminDashboard() {
               <UserList users={users} loading={loadingData} />
             </div>
           )}
-          {activeTab === 'session' && <div className="text-slate-500 text-center py-12">Session creation form coming next.</div>}
+          {activeTab === 'session' && (
+            <SessionForm companies={companies} users={users} onSuccess={fetchData} />
+          )}
         </div>
       </div>
     </div>
@@ -366,6 +368,140 @@ function UserForm({ onSuccess }) {
             className="flex items-center justify-center gap-2 w-full md:w-auto px-6 py-2.5 bg-brand text-white rounded-lg font-medium hover:bg-brand-dark transition-colors shadow-sm disabled:opacity-70"
           >
             <Save size={18} /> {loading ? 'Registering...' : 'Register User'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// --- Session Form ---
+function SessionForm({ companies, users, onSuccess }) {
+  const [formData, setFormData] = useState({ 
+    student: '', 
+    company: '', 
+    supervisor: '', 
+    assessor: '', 
+    startDate: '', 
+    endDate: '' 
+  });
+  const [loading, setLoading] = useState(false);
+  const token = useAuthStore(state => state.token);
+
+  const studentOptions = users.filter(u => u.role === 'student').map(u => ({ value: u._id, label: u.name }));
+  const supervisorOptions = users.filter(u => u.role === 'supervisor').map(u => ({ value: u._id, label: u.name }));
+  const assessorOptions = users.filter(u => u.role === 'assessor').map(u => ({ value: u._id, label: u.name }));
+  const companyOptions = companies.map(c => ({ value: c._id, label: c.name }));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validation: Ensure no empty IDs are sent
+    if (!formData.student || !formData.company || !formData.supervisor || !formData.assessor) {
+      toast.error('Please select all user roles and a company.');
+      return;
+    }
+
+    if (!formData.startDate || !formData.endDate) {
+      toast.error('Please select valid start and end dates.');
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      await api.post('/admin/sessions', formData, buildAuthConfig(token));
+      toast.success('Session created successfully!', {
+        icon: '💼',
+        style: { borderRadius: '10px', background: '#333', color: '#fff' }
+      });
+      setFormData({ student: '', company: '', supervisor: '', assessor: '', startDate: '', endDate: '' });
+      if (onSuccess) onSuccess();
+    } catch (error) {
+      toast.error(extractApiError(error, 'Failed to create session.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-2xl animate-in fade-in">
+      <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+        <Briefcase className="text-brand" /> Create Attachment Session
+      </h2>
+      
+      <form className="space-y-6" onSubmit={handleSubmit}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-40">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Student</label>
+            <CustomSelect 
+              options={studentOptions} 
+              value={formData.student} 
+              onChange={(val) => setFormData({...formData, student: val})} 
+              placeholder="Select a student..."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Company</label>
+            <CustomSelect 
+              options={companyOptions} 
+              value={formData.company} 
+              onChange={(val) => setFormData({...formData, company: val})} 
+              placeholder="Select a company..."
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-30">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Industry Supervisor</label>
+            <CustomSelect 
+              options={supervisorOptions} 
+              value={formData.supervisor} 
+              onChange={(val) => setFormData({...formData, supervisor: val})} 
+              placeholder="Select a supervisor..."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">School Assessor</label>
+            <CustomSelect 
+              options={assessorOptions} 
+              value={formData.assessor} 
+              onChange={(val) => setFormData({...formData, assessor: val})} 
+              placeholder="Select an assessor..."
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
+            <input 
+              type="date" 
+              required
+              value={formData.startDate}
+              onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
+            <input 
+              type="date" 
+              required
+              value={formData.endDate}
+              onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-slate-100 relative z-0">
+          <button 
+            disabled={loading}
+            className="flex items-center justify-center gap-2 w-full md:w-auto px-6 py-2.5 bg-brand text-white rounded-lg font-medium hover:bg-brand-dark transition-colors shadow-sm disabled:opacity-70"
+          >
+            <Save size={18} /> {loading ? 'Creating...' : 'Create Session'}
           </button>
         </div>
       </form>
