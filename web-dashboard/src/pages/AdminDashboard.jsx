@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Building, MapPin, Save, UserPlus, Briefcase, ChevronDown, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
@@ -50,6 +50,33 @@ const CustomSelect = ({ options, value, onChange, placeholder }) => {
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('company');
+  const [companies, setCompanies] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const token = useAuthStore(state => state.token);
+
+  const fetchData = async () => {
+    try {
+      setLoadingData(true);
+      const config = buildAuthConfig(token);
+      const [compRes, userRes] = await Promise.all([
+        api.get('/admin/companies', config),
+        api.get('/admin/users', config)
+      ]);
+      setCompanies(compRes.data?.data || []);
+      setUsers(userRes.data?.data || []);
+    } catch (error) {
+      toast.error('Failed to fetch dashboard data');
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  useEffect(() => {
+    if (token) {
+      fetchData();
+    }
+  }, [token]);
 
   return (
     <div className="py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in duration-500">
@@ -62,7 +89,7 @@ export default function AdminDashboard() {
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-visible">
         {/* Tabs */}
-        <div className="flex border-b border-slate-200">
+        <div className="flex border-b border-slate-200 flex-wrap">
           <button 
             onClick={() => setActiveTab('company')}
             className={`flex items-center gap-2 px-6 py-4 font-medium text-sm transition-colors ${activeTab === 'company' ? 'border-b-2 border-brand text-brand' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
@@ -85,8 +112,18 @@ export default function AdminDashboard() {
 
         {/* Tab Content */}
         <div className="p-8">
-          {activeTab === 'company' && <CompanyForm />}
-          {activeTab === 'user' && <UserForm />}
+          {activeTab === 'company' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+              <CompanyForm onSuccess={fetchData} />
+              <CompanyList companies={companies} loading={loadingData} />
+            </div>
+          )}
+          {activeTab === 'user' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+              <UserForm onSuccess={fetchData} />
+              <UserList users={users} loading={loadingData} />
+            </div>
+          )}
           {activeTab === 'session' && <div className="text-slate-500 text-center py-12">Session creation form coming next.</div>}
         </div>
       </div>
@@ -95,7 +132,7 @@ export default function AdminDashboard() {
 }
 
 // --- Company Form ---
-function CompanyForm() {
+function CompanyForm({ onSuccess }) {
   const [formData, setFormData] = useState({ name: '', address: '', latitude: '', longitude: '', allowedRadiusMeters: 200 });
   const [loading, setLoading] = useState(false);
   const token = useAuthStore(state => state.token);
@@ -119,6 +156,7 @@ function CompanyForm() {
         style: { borderRadius: '10px', background: '#333', color: '#fff' }
       });
       setFormData({ name: '', address: '', latitude: '', longitude: '', allowedRadiusMeters: 200 });
+      if (onSuccess) onSuccess();
     } catch (error) {
       toast.error(extractApiError(error, 'Failed to register company.'));
     } finally {
@@ -222,7 +260,7 @@ function CompanyForm() {
 }
 
 // --- User Form ---
-function UserForm() {
+function UserForm({ onSuccess }) {
   const [formData, setFormData] = useState({ name: '', email: '', role: 'student', registrationNumber: '' });
   const [loading, setLoading] = useState(false);
   const token = useAuthStore(state => state.token);
@@ -255,6 +293,7 @@ function UserForm() {
         duration: 5000
       });
       setFormData({ name: '', email: '', role: 'student', registrationNumber: '' });
+      if (onSuccess) onSuccess();
     } catch (error) {
       toast.error(extractApiError(error, 'Registration failed'));
     } finally {
@@ -330,6 +369,73 @@ function UserForm() {
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+// --- List Components ---
+function CompanyList({ companies, loading }) {
+  if (loading) return <div className="text-slate-500">Loading companies...</div>;
+  if (!companies.length) return <div className="text-slate-500">No companies registered yet.</div>;
+  
+  return (
+    <div className="animate-in fade-in">
+      <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+        Registered Companies
+      </h3>
+      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+        <table className="w-full text-sm text-left text-slate-500">
+          <thead className="text-xs text-slate-700 uppercase bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th className="px-6 py-3">Name</th>
+              <th className="px-6 py-3">Address</th>
+              <th className="px-6 py-3">Radius</th>
+            </tr>
+          </thead>
+          <tbody>
+            {companies.map(c => (
+              <tr key={c._id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                <td className="px-6 py-4 font-medium text-slate-900">{c.name}</td>
+                <td className="px-6 py-4">{c.address}</td>
+                <td className="px-6 py-4">{c.allowedRadiusMeters}m</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function UserList({ users, loading }) {
+  if (loading) return <div className="text-slate-500">Loading users...</div>;
+  if (!users.length) return <div className="text-slate-500">No users registered yet.</div>;
+  
+  return (
+    <div className="animate-in fade-in">
+      <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+        Registered Users
+      </h3>
+      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+        <table className="w-full text-sm text-left text-slate-500">
+          <thead className="text-xs text-slate-700 uppercase bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th className="px-6 py-3">Name</th>
+              <th className="px-6 py-3">Role</th>
+              <th className="px-6 py-3">Email</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map(u => (
+              <tr key={u._id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                <td className="px-6 py-4 font-medium text-slate-900">{u.name}</td>
+                <td className="px-6 py-4 capitalize">{u.role}</td>
+                <td className="px-6 py-4">{u.email}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
