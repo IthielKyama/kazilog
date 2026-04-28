@@ -4,7 +4,8 @@ const {
   createCompany,
   getCompanies,
   getUsers,
-  createSession
+  createSession,
+  getSessions
 } = require('../controllers/adminController');
 
 const { protect, authorize } = require('../middlewares/authMiddleware');
@@ -22,6 +23,7 @@ router.route('/users')
   .get(getUsers);
 
 router.route('/sessions')
-  .post(createSession);
+  .post(createSession)
+  .get(getSessions);
 
 module.exports = router;
