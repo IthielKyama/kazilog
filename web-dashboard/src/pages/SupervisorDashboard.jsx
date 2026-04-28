@@ -7,12 +7,15 @@ import { api, buildAuthConfig, extractApiError } from '../lib/api';
 export default function SupervisorDashboard() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('Pending');
+  const [comments, setComments] = useState({});
   const token = useAuthStore(state => state.token);
 
   useEffect(() => {
-    const fetchPendingLogs = async () => {
+    const fetchLogs = async () => {
+      setLoading(true);
       try {
-        const { data } = await api.get('/logs/supervisor', buildAuthConfig(token));
+        const { data } = await api.get(`/logs/supervisor?status=${statusFilter}`, buildAuthConfig(token));
         setLogs(data.data);
       } catch (error) {
         toast.error(extractApiError(error, 'Failed to fetch pending logs'));
@@ -21,15 +24,21 @@ export default function SupervisorDashboard() {
       }
     };
 
-    void fetchPendingLogs();
-  }, [token]);
+    void fetchLogs();
+  }, [token, statusFilter]);
 
   const handleReview = async (logId, status) => {
     try {
-      await api.put(`/logs/${logId}/review`, { status }, buildAuthConfig(token));
+      await api.put(`/logs/${logId}/review`, { status, comment: comments[logId] || '' }, buildAuthConfig(token));
       toast.success(`Log ${status}!`, { style: { background: '#333', color: '#fff' } });
-      // Remove the reviewed log from the local state
-      setLogs(logs.filter(log => log._id !== logId));
+      
+      // Update the log in local state
+      if (statusFilter === 'Pending') {
+        setLogs(logs.filter(log => log._id !== logId));
+      } else {
+        setLogs(logs.map(log => log._id === logId ? { ...log, supervisorStatus: status, supervisorComment: comments[logId] || '' } : log));
+      }
+      setComments({ ...comments, [logId]: '' });
     } catch (error) {
       toast.error(extractApiError(error, `Failed to ${status.toLowerCase()} log`));
     }
@@ -37,11 +46,26 @@ export default function SupervisorDashboard() {
 
   return (
     <div className="py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in duration-500">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-          <CheckSquare className="text-brand" size={32} /> Pending Logbook Reviews
-        </h1>
-        <p className="text-slate-500 mt-2">Review and approve daily tasks submitted by your attached students.</p>
+      <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
+            <CheckSquare className="text-brand" size={32} /> Logbook Reviews
+          </h1>
+          <p className="text-slate-500 mt-2">Review and manage daily tasks submitted by your attached students.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-slate-700">Filter by Status:</label>
+          <select 
+            value={statusFilter} 
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none"
+          >
+            <option value="All">All</option>
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -69,10 +93,17 @@ export default function SupervisorDashboard() {
                         </p>
                       </div>
                       
-                      {/* GPS Badge */}
-                      <div className={`px-3 py-1 rounded-full flex items-center gap-1.5 text-xs font-semibold ${log.isWithinBoundary ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                        <MapPin size={12} />
-                        {log.isWithinBoundary ? 'Inside Geofence' : 'Outside Geofence'}
+                      {/* Badges */}
+                      <div className="flex gap-2">
+                        {log.supervisorStatus && log.supervisorStatus !== 'Pending' && (
+                           <div className={`px-3 py-1 rounded-full flex items-center gap-1.5 text-xs font-semibold ${log.supervisorStatus === 'Approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                             {log.supervisorStatus}
+                           </div>
+                        )}
+                        <div className={`px-3 py-1 rounded-full flex items-center gap-1.5 text-xs font-semibold ${log.isWithinBoundary ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                          <MapPin size={12} />
+                          {log.isWithinBoundary ? 'Inside Geofence' : 'Outside Geofence'}
+                        </div>
                       </div>
                     </div>
 
@@ -86,23 +117,44 @@ export default function SupervisorDashboard() {
                         <p className="text-sm text-slate-700 whitespace-pre-wrap">{log.skillsLearned}</p>
                       </div>
                     </div>
+                    {/* Comments section */}
+                    {log.supervisorComment && log.supervisorStatus !== 'Pending' && (
+                      <div className="mt-4 bg-amber-50 p-3 rounded border border-amber-100">
+                        <span className="text-xs font-bold text-amber-700 uppercase tracking-wider block mb-1">Your Comment</span>
+                        <p className="text-sm text-slate-700">{log.supervisorComment}</p>
+                      </div>
+                    )}
+                    
+                    {log.supervisorStatus === 'Pending' && (
+                      <div className="mt-4">
+                        <textarea
+                          placeholder="Add a comment (optional)..."
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand outline-none text-sm"
+                          rows="2"
+                          value={comments[log._id] || ''}
+                          onChange={(e) => setComments({ ...comments, [log._id]: e.target.value })}
+                        ></textarea>
+                      </div>
+                    )}
                   </div>
 
                   {/* Actions */}
-                  <div className="flex md:flex-col gap-3 justify-end items-end md:w-32 border-t md:border-t-0 md:border-l border-slate-200 pt-4 md:pt-0 md:pl-6">
-                    <button 
-                      onClick={() => handleReview(log._id, 'Approved')}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg font-medium hover:bg-emerald-600 transition-colors"
-                    >
-                      <Check size={16} /> Approve
-                    </button>
-                    <button 
-                      onClick={() => handleReview(log._id, 'Rejected')}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white border border-rose-200 text-rose-600 rounded-lg font-medium hover:bg-rose-50 transition-colors"
-                    >
-                      <X size={16} /> Reject
-                    </button>
-                  </div>
+                  {log.supervisorStatus === 'Pending' && (
+                    <div className="flex md:flex-col gap-3 justify-end items-end md:w-32 border-t md:border-t-0 md:border-l border-slate-200 pt-4 md:pt-0 md:pl-6">
+                      <button 
+                        onClick={() => handleReview(log._id, 'Approved')}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg font-medium hover:bg-emerald-600 transition-colors"
+                      >
+                        <Check size={16} /> Approve
+                      </button>
+                      <button 
+                        onClick={() => handleReview(log._id, 'Rejected')}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white border border-rose-200 text-rose-600 rounded-lg font-medium hover:bg-rose-50 transition-colors"
+                      >
+                        <X size={16} /> Reject
+                      </button>
+                    </div>
+                  )}
 
                 </div>
               </div>
