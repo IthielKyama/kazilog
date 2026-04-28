@@ -51,6 +51,9 @@ const logbookEntrySchema = new mongoose.Schema({
   },
   supervisorComment: {
     type: String
+  },
+  imageUrl: {
+    type: String
   }
 }, {
   timestamps: true
