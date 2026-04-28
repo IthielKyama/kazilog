@@ -52,6 +52,27 @@ export const logbookApi = {
     return data.data;
   },
   async submitLog(payload: Omit<OfflineLogPayload, 'localId' | 'capturedAt'>) {
+    if (payload.imageUri) {
+      const formData = new FormData();
+      formData.append('sessionId', payload.sessionId);
+      formData.append('tasksDone', payload.tasksDone);
+      formData.append('skillsLearned', payload.skillsLearned);
+      formData.append('latitude', payload.latitude.toString());
+      formData.append('longitude', payload.longitude.toString());
+      
+      const filename = payload.imageUri.split('/').pop() || 'photo.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : `image/jpeg`;
+      
+      // @ts-ignore: React Native FormData accepts an object with uri, name, and type
+      formData.append('image', { uri: payload.imageUri, name: filename, type });
+      
+      const { data } = await api.post('/logs', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      return data;
+    }
+
     const { data } = await api.post('/logs', payload);
     return data;
   },

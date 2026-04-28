@@ -19,6 +19,7 @@ export const syncOfflineLogs = async () => {
       skillsLearned: queuedLog.skillsLearned,
       latitude: queuedLog.latitude,
       longitude: queuedLog.longitude,
+      imageUri: queuedLog.imageUri,
     });
 
     await offlineLogStorage.removeLog(queuedLog.localId);
