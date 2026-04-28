@@ -54,6 +54,11 @@ const logbookEntrySchema = new mongoose.Schema({
   },
   imageUrl: {
     type: String
+  },
+  idempotencyKey: {
+    type: String,
+    unique: true,
+    sparse: true // allows existing records without this key to coexist
   }
 }, {
   timestamps: true
