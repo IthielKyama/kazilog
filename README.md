@@ -1,42 +1,113 @@
 # KaziLog
 
-KaziLog is a GPS-enabled digital logbook system for industrial attachment management in Kenyan universities and TVET institutions. It replaces paper logbooks with a live platform for student daily submissions, supervisor review, and assessor grading.
+KaziLog is a GPS-enabled digital logbook system for industrial attachment management in Kenyan universities and TVET institutions. This repository contains the backend API, the web dashboard, and the Expo mobile app used for local development and QA.
 
-## Monorepo Structure
+## Apps
 
-- `backend/`: Express + MongoDB API for authentication, role-based access, geofencing, logbook workflows, and assessment.
-- `mobile-app/`: Expo React Native student app for GPS-backed daily logging, offline queueing, and submission history.
-- `web-dashboard/`: React + Vite dashboard for admins, supervisors, and assessors.
+- `backend/`: Express + MongoDB API
+- `web-dashboard/`: React + Vite dashboard for admins, supervisors, and assessors
+- `mobile-app/`: Expo React Native app for students
 
 ## Prerequisites
 
-- Node.js 20+ recommended
-- npm 10+ recommended
-- MongoDB locally or MongoDB Atlas
-- Expo Go or an Android/iOS emulator for the mobile app
+- Node.js 20+
+- npm 10+
+- MongoDB running locally or via MongoDB Atlas
+- Expo Go or an Android emulator for mobile testing
 
-## Setup
+## Quick Start
 
-There is no root workspace script yet, so install and run each app separately.
-
-### 1. Clone and install dependencies
+### 1. Clone the repo
 
 ```powershell
 git clone <this-repo-url>
-cd KaziLog
-
-cd backend
-npm install
-cd ..\web-dashboard
-npm install
-cd ..\mobile-app
-npm install
-cd ..
+cd kazilog
 ```
 
-### 2. Configure the backend
+### 2. Copy the env templates
 
-Create `backend/.env` with:
+```powershell
+Copy-Item backend/.env.example backend/.env
+Copy-Item web-dashboard/.env.example web-dashboard/.env
+Copy-Item mobile-app/.env.example mobile-app/.env
+```
+
+### 3. Install dependencies for every app
+
+```powershell
+npm run setup
+```
+
+### 4. Start the backend and dashboard
+
+```powershell
+npm run dev
+```
+
+This starts:
+
+- the backend on `http://localhost:5000`
+- the dashboard on `http://localhost:5173`
+
+### 5. Start the mobile app
+
+Open a second terminal and run:
+
+```powershell
+npm run dev:mobile
+```
+
+The default mobile env is optimized for the Android emulator and points to `http://10.0.2.2:5000/api`.
+
+### 6. Bootstrap the first admin account
+
+Open a third terminal and run:
+
+```powershell
+npm run bootstrap:admin
+```
+
+This reads `ADMIN_NAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` from `backend/.env` and creates or updates the admin account directly in MongoDB.
+
+## Standard Scripts
+
+### Root
+
+- `npm run setup`: install dependencies for all apps
+- `npm run dev`: start backend and dashboard together
+- `npm run dev:mobile`: start the Expo mobile app
+- `npm run bootstrap:admin`: create or update the initial admin user
+- `npm run check`: run backend tests, dashboard build, and mobile typecheck
+
+### Backend
+
+- `npm --prefix backend run setup`
+- `npm --prefix backend run dev`
+- `npm --prefix backend run bootstrap:admin`
+- `npm --prefix backend run create-admin`
+- `npm --prefix backend test`
+
+### Web Dashboard
+
+- `npm --prefix web-dashboard run setup`
+- `npm --prefix web-dashboard run dev`
+- `npm --prefix web-dashboard run build`
+- `npm --prefix web-dashboard run lint`
+
+### Mobile App
+
+- `npm --prefix mobile-app run setup`
+- `npm --prefix mobile-app run dev`
+- `npm --prefix mobile-app run dev:android`
+- `npm --prefix mobile-app run dev:ios`
+- `npm --prefix mobile-app run dev:web`
+- `npm --prefix mobile-app run typecheck`
+
+## Environment Files
+
+### Backend
+
+`backend/.env.example` includes:
 
 ```env
 PORT=5000
@@ -46,95 +117,50 @@ JWT_SECRET=replace-this-with-a-long-random-secret
 ADMIN_NAME=System Admin
 ADMIN_EMAIL=admin@kazilog.com
 ADMIN_PASSWORD=Admin@12345
+WEB_DASHBOARD_URL=http://localhost:5173
 ```
 
-Start the API:
+`WEB_DASHBOARD_URL` is used for password reset links sent by the backend.
 
-```powershell
-cd backend
-npm run dev
+### Web Dashboard
+
+`web-dashboard/.env.example` includes:
+
+```env
+VITE_API_BASE_URL=http://localhost:5000/api
 ```
 
-Bootstrap the first admin account in a fresh database:
+### Mobile App
 
-```powershell
-cd backend
-npm run create-admin
+`mobile-app/.env.example` includes:
+
+```env
+EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:5000/api
 ```
 
-That script now creates or updates the admin directly in MongoDB using the values in `backend/.env`.
+Override `EXPO_PUBLIC_API_BASE_URL` if you are using:
 
-### 3. Start the web dashboard
-
-```powershell
-cd web-dashboard
-npm run dev
-```
-
-Open `http://localhost:5173`.
-
-### 4. Start the mobile app
-
-The mobile app reads `EXPO_PUBLIC_API_BASE_URL` if provided. If not provided, it falls back to:
-
-- Android emulator: `http://10.0.2.2:5000/api`
-- Other platforms: `http://localhost:5000/api`
-
-For a physical device on the same network, set your machine IP explicitly:
-
-```powershell
-$env:EXPO_PUBLIC_API_BASE_URL="http://YOUR_LOCAL_IP:5000/api"
-cd mobile-app
-npm start
-```
-
-You can also use:
-
-```powershell
-npm run android
-npm run ios
-npm run web
-```
+- iOS simulator or Expo web: `http://localhost:5000/api`
+- a physical device on the same network: `http://YOUR_LOCAL_IP:5000/api`
 
 ## Suggested Local Demo Flow
 
-1. Start MongoDB and the backend.
-2. Run `npm run create-admin` inside `backend`.
-3. Start `web-dashboard` and sign in as the admin.
-4. Register supervisor, assessor, and student accounts from the admin dashboard.
-5. Create companies and attachment sessions.
-6. Sign into the mobile app as the student and submit logs from within the configured geofence.
-7. Sign into the dashboard as the supervisor to approve or reject logs.
-8. Sign into the dashboard as the assessor to view assigned students and award final grades.
+1. Start MongoDB.
+2. Run `npm run setup`.
+3. Run `npm run dev`.
+4. Run `npm run dev:mobile`.
+5. Run `npm run bootstrap:admin`.
+6. Sign into the dashboard with the admin credentials from `backend/.env`.
+7. Register supervisor, assessor, and student accounts from the admin dashboard.
+8. Create companies and attachment sessions.
+9. Sign into the mobile app as the student and submit logs from within the configured geofence.
+10. Sign into the dashboard as the supervisor to review logs.
+11. Sign into the dashboard as the assessor to submit final grades.
 
-## Backend API Areas
-
-- `/api/auth`: login, registration, profile, change password, forgot password, reset password
-- `/api/logs`: active session lookup, student submissions, student history, supervisor review
-- `/api/admin`: companies, users, attachment sessions
-- `/api/assessor`: assigned sessions and final grading
-
-## Testing and Verification
-
-Backend tests:
+## Verification
 
 ```powershell
-cd backend
-npm test
+npm run check
 ```
 
-Mobile type checking:
-
-```powershell
-cd mobile-app
-npm run typecheck
-```
-
-Dashboard production build:
-
-```powershell
-cd web-dashboard
-npm run build
-```
-
-
+If you hit local Windows permission issues with spawned test/build tools, rerun the verification commands in a normal local shell or CI environment.

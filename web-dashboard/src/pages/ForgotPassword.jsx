@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { MapPin, Mail, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
 import toast from 'react-hot-toast';
+import { api, extractApiError } from '../lib/api';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -14,13 +14,13 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      await axios.post('http://localhost:5000/api/auth/forgotpassword', { email });
+      await api.post('/auth/forgotpassword', { email });
       setEmailSent(true);
       toast.success('Password reset link sent to your email', {
         style: { borderRadius: '10px', background: '#333', color: '#fff' }
       });
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Error sending email');
+      toast.error(extractApiError(error, 'Error sending email'));
     } finally {
       setLoading(false);
     }
