@@ -4,7 +4,7 @@ import { AppState } from 'react-native';
 
 import { authApi, extractApiError, logbookApi, setAuthToken } from '../services/api';
 import { authStorage, offlineLogStorage } from '../services/storage';
-import { syncOfflineLogs } from '../utils/offlineQueue';
+import { syncManager } from '../utils/SyncManager';
 import { AttachmentSession, AuthUser, LogEntry, OfflineLogPayload } from '../types';
 
 type AuthContextValue = {
@@ -76,17 +76,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setSyncState({ syncing: true, lastMessage: 'Syncing saved logs...' });
 
     try {
-      const result = await syncOfflineLogs();
+      await syncManager.triggerSync();
       await refreshPendingLogs();
       await refreshSessionData();
 
-      if (result.skipped) {
-        setSyncState({ syncing: false, lastMessage: 'You are offline. Saved logs will sync when connectivity returns.' });
-      } else if (result.synced > 0) {
-        setSyncState({ syncing: false, lastMessage: `${result.synced} queued log${result.synced === 1 ? '' : 's'} synced.` });
-      } else {
-        setSyncState({ syncing: false, lastMessage: 'All logs are already up to date.' });
-      }
+      setSyncState({ syncing: false, lastMessage: 'Sync complete.' });
     } catch (error) {
       setSyncState({ syncing: false, lastMessage: extractApiError(error) });
       throw error;
