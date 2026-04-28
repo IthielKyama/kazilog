@@ -86,9 +86,9 @@ export const offlineLogStorage = {
     await this.setLogs(logs);
     return logs;
   },
-  async removeLog(localId: string) {
+  async removeLog(idempotencyKey: string) {
     const logs = await this.getLogs();
-    const nextLogs = logs.filter((item) => item.localId !== localId);
+    const nextLogs = logs.filter((item) => item.idempotencyKey !== idempotencyKey);
     await this.setLogs(nextLogs);
     return nextLogs;
   },
