@@ -98,20 +98,29 @@ export default function AdminDashboard() {
 function CompanyForm() {
   const [formData, setFormData] = useState({ name: '', address: '', latitude: '', longitude: '', allowedRadiusMeters: 200 });
   const [loading, setLoading] = useState(false);
+  const token = useAuthStore(state => state.token);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 800)); 
+      const payload = {
+        name: formData.name,
+        address: formData.address,
+        latitude: Number(formData.latitude),
+        longitude: Number(formData.longitude),
+        allowedRadiusMeters: Number(formData.allowedRadiusMeters)
+      };
+      
+      await api.post('/admin/companies', payload, buildAuthConfig(token));
       toast.success(`${formData.name} has been registered successfully!`, {
         icon: '🏢',
         style: { borderRadius: '10px', background: '#333', color: '#fff' }
       });
       setFormData({ name: '', address: '', latitude: '', longitude: '', allowedRadiusMeters: 200 });
-    } catch {
-      toast.error('Failed to register company.');
+    } catch (error) {
+      toast.error(extractApiError(error, 'Failed to register company.'));
     } finally {
       setLoading(false);
     }
