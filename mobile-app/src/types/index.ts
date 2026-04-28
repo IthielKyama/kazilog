@@ -48,8 +48,11 @@ export type LogEntry = {
   createdAt: string;
 };
 
+export type SyncState = 'queued' | 'syncing' | 'synced' | 'failed';
+
 export type OfflineLogPayload = {
   localId: string;
+  idempotencyKey: string;
   sessionId: string;
   tasksDone: string;
   skillsLearned: string;
@@ -57,4 +60,10 @@ export type OfflineLogPayload = {
   longitude: number;
   capturedAt: string;
   imageUri?: string;
+  
+  // Sync Metadata
+  syncState: SyncState;
+  retryCount: number;
+  lastError?: string;
+  nextRetryAt?: number;
 };
