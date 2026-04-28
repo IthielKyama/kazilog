@@ -6,10 +6,12 @@ import * as ImagePicker from 'expo-image-picker';
 import { differenceInWeeks, parseISO } from 'date-fns';
 import { Camera, MapPin, X } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
+import * as Crypto from 'expo-crypto';
 
 import { useAuth } from '../../context/AuthContext';
 import { extractApiError, logbookApi } from '../../services/api';
-import { getCurrentCoordinates } from '../../utils/location';
+import { getResilientCoordinates } from '../../utils/location';
+import { syncManager } from '../../utils/SyncManager';
 import { FloatingLabelInput } from '../../components/FloatingLabelInput';
 
 export function DailyLogScreen({ navigation }: any) {
@@ -138,7 +140,7 @@ export function DailyLogScreen({ navigation }: any) {
     setSubmitting(true);
     setMessage(null);
 
-    let coords = await getCurrentCoordinates();
+    let { coords, error } = await getResilientCoordinates();
 
     // Fallback to company location if GPS capture fails (DEVELOPMENT ONLY - to prevent student bypass in production)
     if (!coords && __DEV__ && activeSession?.company?.location?.coordinates) {
@@ -156,78 +158,47 @@ export function DailyLogScreen({ navigation }: any) {
       Toast.show({
         type: 'error',
         text1: 'Location Error',
-        text2: 'Could not verify your location. Please ensure GPS is enabled.',
+        text2: error || 'Could not verify your location. Please ensure GPS is enabled.',
       });
       return;
     }
 
     try {
       const payload = {
+        localId: Date.now().toString(),
+        idempotencyKey: Crypto.randomUUID(),
         sessionId: activeSession._id,
         tasksDone: tasksDone.trim(),
         skillsLearned: skillsLearned.trim(),
         latitude: coords.latitude,
         longitude: coords.longitude,
+        capturedAt: new Date().toISOString(),
+        syncState: 'queued' as const,
+        retryCount: 0,
         ...(imageUri && { imageUri })
       };
 
-      const networkState = await NetInfo.fetch();
-      if (networkState.isConnected) {
-        await logbookApi.submitLog(payload);
-        await refreshSessionData();
-        Toast.show({
-          type: 'success',
-          text1: 'Success',
-          text2: 'Log submitted successfully.',
-        });
-      } else {
-        await queueOfflineLog({
-          localId: `${Date.now()}`,
-          capturedAt: new Date().toISOString(),
-          ...payload,
-        });
-        Toast.show({
-          type: 'info',
-          text1: 'Saved Offline',
-          text2: 'No internet. Your log will sync automatically.',
-        });
-      }
+      // Always save locally first for robustness
+      await queueOfflineLog(payload);
+
+      // Trigger background sync
+      syncManager.triggerSync().catch(console.error);
+
+      Toast.show({
+        type: 'success',
+        text1: 'Log Saved',
+        text2: 'Your log is safely queued and syncing.',
+      });
 
       setTasksDone('');
       setSkillsLearned('');
       setImageUri(null);
-    } catch (error) {
-      const errorMessage = extractApiError(error);
-      
-      // If the browser misreports online status but the request fails with a network error
-      if (errorMessage.toLowerCase().includes('network error') || errorMessage.toLowerCase().includes('failed to fetch')) {
-        await queueOfflineLog({
-          localId: `${Date.now()}`,
-          capturedAt: new Date().toISOString(),
-          sessionId: activeSession._id,
-          tasksDone: tasksDone.trim(),
-          skillsLearned: skillsLearned.trim(),
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-          ...(imageUri && { imageUri })
-        });
-        
-        Toast.show({
-          type: 'info',
-          text1: 'Saved Offline',
-          text2: 'Server unreachable. Log saved to offline queue.',
-        });
-        
-        setTasksDone('');
-        setSkillsLearned('');
-        setImageUri(null);
-      } else {
-        Toast.show({
-          type: 'error',
-          text1: 'Error',
-          text2: errorMessage,
-        });
-      }
+    } catch (err: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to save log. Please try again.',
+      });
     } finally {
       setSubmitting(false);
     }
@@ -256,22 +227,29 @@ export function DailyLogScreen({ navigation }: any) {
         </View>
       )}
 
-      {pendingLogs.length > 0 && (
-        <View className="bg-amber-50 rounded-2xl p-4 border border-amber-200">
-          <View className="flex-row justify-between items-center mb-2">
-            <Text className="text-amber-800 font-semibold text-sm">Offline Queue ({pendingLogs.length})</Text>
-            <Text 
-              className="text-brand font-bold text-sm" 
-              onPress={() => syncNow().catch((error) => setMessage(extractApiError(error)))}
-            >
-              {syncState.syncing ? 'Syncing...' : 'Sync Now'}
+      {pendingLogs.length > 0 && (() => {
+        const hasFailed = pendingLogs.some(log => log.syncState === 'failed');
+        const failedMessage = pendingLogs.find(log => log.syncState === 'failed')?.lastError;
+        
+        return (
+          <View className={`rounded-2xl p-4 border ${hasFailed ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+            <View className="flex-row justify-between items-center mb-2">
+              <Text className={`${hasFailed ? 'text-red-800' : 'text-amber-800'} font-semibold text-sm`}>
+                Offline Queue ({pendingLogs.length})
+              </Text>
+              <Text 
+                className="text-brand font-bold text-sm" 
+                onPress={() => syncNow().catch((error) => setMessage(extractApiError(error)))}
+              >
+                {syncState.syncing ? 'Syncing...' : (hasFailed ? 'Retry Failed' : 'Sync Now')}
+              </Text>
+            </View>
+            <Text className={`text-xs ${hasFailed ? 'text-red-700' : 'text-amber-700'}`}>
+              {hasFailed ? `Error: ${failedMessage}` : (syncState.lastMessage || 'Waiting for internet connection to sync logs.')}
             </Text>
           </View>
-          <Text className="text-xs text-amber-700">
-            {syncState.lastMessage || 'Waiting for internet connection to sync logs.'}
-          </Text>
-        </View>
-      )}
+        );
+      })()}
 
       <View className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 mb-6">
         <View className="mb-6">
