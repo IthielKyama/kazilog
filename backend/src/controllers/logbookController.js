@@ -101,7 +101,7 @@ exports.getStudentLogs = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Get pending logs for a supervisor to review
+// @desc    Get logs for a supervisor to review
 // @route   GET /api/logs/supervisor
 // @access  Private (Supervisor only)
 exports.getSupervisorLogs = asyncHandler(async (req, res) => {
@@ -109,11 +109,18 @@ exports.getSupervisorLogs = asyncHandler(async (req, res) => {
   const sessions = await AttachmentSession.find({ supervisor: req.user.id }).select('_id');
   const sessionIds = sessions.map(s => s._id);
 
+  const filter = { session: { $in: sessionIds } };
+  
+  if (req.query.status && req.query.status !== 'All') {
+    filter.supervisorStatus = req.query.status;
+  } else if (!req.query.status) {
+    filter.supervisorStatus = 'Pending';
+  }
+
   // Find logs belonging to these sessions
-  const logs = await LogbookEntry.find({ 
-    session: { $in: sessionIds },
-    supervisorStatus: 'Pending'
-  }).populate('student', 'name email registrationNumber').sort('date');
+  const logs = await LogbookEntry.find(filter)
+    .populate('student', 'name email registrationNumber')
+    .sort('-date');
 
   res.status(200).json({
     success: true,
@@ -158,5 +165,31 @@ exports.reviewLog = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     data: log
+  });
+});
+
+// @desc    Get logs for a specific session
+// @route   GET /api/logs/session/:sessionId
+// @access  Private (Assessor or Supervisor)
+exports.getSessionLogs = asyncHandler(async (req, res) => {
+  const { sessionId } = req.params;
+  
+  const session = await AttachmentSession.findById(sessionId);
+  if (!session) {
+    res.status(404);
+    throw new Error('Session not found');
+  }
+
+  if (req.user.role !== 'admin' && session.assessor.toString() !== req.user.id && session.supervisor.toString() !== req.user.id) {
+     res.status(403);
+     throw new Error('Not authorized to view logs for this session');
+  }
+
+  const logs = await LogbookEntry.find({ session: sessionId, supervisorStatus: 'Approved' }).sort('-date');
+
+  res.status(200).json({
+    success: true,
+    count: logs.length,
+    data: logs
   });
 });
