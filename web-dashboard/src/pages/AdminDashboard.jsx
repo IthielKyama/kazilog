@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Building, MapPin, Save, UserPlus, Briefcase, ChevronDown, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
-import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
+import { api, buildAuthConfig, extractApiError } from '../lib/api';
 
 // --- Custom Select Component (No Browser Defaults) ---
 const CustomSelect = ({ options, value, onChange, placeholder }) => {
@@ -103,9 +103,7 @@ function CompanyForm() {
     e.preventDefault();
     setLoading(true);
     
-    // Simulate API Call for now until we set up the admin JWT token
     try {
-      // In real life: await axios.post('http://localhost:5000/api/admin/companies', formData)
       await new Promise(resolve => setTimeout(resolve, 800)); 
       toast.success(`${formData.name} has been registered successfully!`, {
         icon: '🏢',
@@ -241,9 +239,7 @@ function UserForm() {
         payload.registrationNumber = formData.registrationNumber;
       }
 
-      await axios.post('http://localhost:5000/api/auth/register', payload, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
+      await api.post('/auth/register', payload, buildAuthConfig(token));
       toast.success(`${formData.name} registered! A temporary password has been emailed to ${formData.email}.`, {
         icon: '📧',
         style: { borderRadius: '10px', background: '#333', color: '#fff' },
@@ -251,7 +247,7 @@ function UserForm() {
       });
       setFormData({ name: '', email: '', role: 'student', registrationNumber: '' });
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Registration failed');
+      toast.error(extractApiError(error, 'Registration failed'));
     } finally {
       setLoading(false);
     }

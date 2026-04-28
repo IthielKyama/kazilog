@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Users, GraduationCap, ChevronDown, Check } from 'lucide-react';
-import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
+import { api, buildAuthConfig, extractApiError } from '../lib/api';
 
 // Custom Select Component for Grading (No Browser Defaults)
 const GradeSelect = ({ value, onChange, disabled }) => {
@@ -55,12 +55,10 @@ export default function AssessorDashboard() {
   useEffect(() => {
     const fetchAssignedSessions = async () => {
       try {
-        const { data } = await axios.get('http://localhost:5000/api/assessor/sessions', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const { data } = await api.get('/assessor/sessions', buildAuthConfig(token));
         setSessions(data.data);
-      } catch {
-        toast.error('Failed to fetch assigned students');
+      } catch (error) {
+        toast.error(extractApiError(error, 'Failed to fetch assigned students'));
       } finally {
         setLoading(false);
       }
@@ -71,16 +69,18 @@ export default function AssessorDashboard() {
 
   const handleGradeChange = async (sessionId, newGrade) => {
     try {
-      await axios.put(`http://localhost:5000/api/assessor/sessions/${sessionId}/grade`, { finalGrade: newGrade }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.put(
+        `/assessor/sessions/${sessionId}/grade`,
+        { finalGrade: newGrade },
+        buildAuthConfig(token)
+      );
       
       toast.success(`Grade updated to ${newGrade}`, { icon: '🎓', style: { background: '#333', color: '#fff' } });
       
       // Update local state
       setSessions(sessions.map(s => s._id === sessionId ? { ...s, finalGrade: newGrade, isActive: newGrade === 'Pending' } : s));
-    } catch {
-      toast.error('Failed to update grade');
+    } catch (error) {
+      toast.error(extractApiError(error, 'Failed to update grade'));
     }
   };
 

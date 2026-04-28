@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { CheckSquare, Check, X, Clock, MapPin } from 'lucide-react';
-import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
+import { api, buildAuthConfig, extractApiError } from '../lib/api';
 
 export default function SupervisorDashboard() {
   const [logs, setLogs] = useState([]);
@@ -12,12 +12,10 @@ export default function SupervisorDashboard() {
   useEffect(() => {
     const fetchPendingLogs = async () => {
       try {
-        const { data } = await axios.get('http://localhost:5000/api/logs/supervisor', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const { data } = await api.get('/logs/supervisor', buildAuthConfig(token));
         setLogs(data.data);
-      } catch {
-        toast.error('Failed to fetch pending logs');
+      } catch (error) {
+        toast.error(extractApiError(error, 'Failed to fetch pending logs'));
       } finally {
         setLoading(false);
       }
@@ -28,14 +26,12 @@ export default function SupervisorDashboard() {
 
   const handleReview = async (logId, status) => {
     try {
-      await axios.put(`http://localhost:5000/api/logs/${logId}/review`, { status }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.put(`/logs/${logId}/review`, { status }, buildAuthConfig(token));
       toast.success(`Log ${status}!`, { style: { background: '#333', color: '#fff' } });
       // Remove the reviewed log from the local state
       setLogs(logs.filter(log => log._id !== logId));
-    } catch {
-      toast.error(`Failed to ${status.toLowerCase()} log`);
+    } catch (error) {
+      toast.error(extractApiError(error, `Failed to ${status.toLowerCase()} log`));
     }
   };
 

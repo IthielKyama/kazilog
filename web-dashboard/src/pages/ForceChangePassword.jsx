@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { MapPin, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import { isStrongPassword, PASSWORD_POLICY_MESSAGE } from '../utils/passwordPolicy';
 import PasswordField from '../components/PasswordField';
+import { api, buildAuthConfig, extractApiError } from '../lib/api';
 
 const getDefaultRoute = (role) => {
   if (role === 'admin') return '/admin';
@@ -51,10 +51,10 @@ export default function ForceChangePassword() {
     setLoading(true);
 
     try {
-      const { data } = await axios.put(
-        'http://localhost:5000/api/auth/change-password',
+      const { data } = await api.put(
+        '/auth/change-password',
         { currentPassword, newPassword },
-        { headers: { Authorization: `Bearer ${token}` } }
+        buildAuthConfig(token)
       );
 
       login(
@@ -71,7 +71,7 @@ export default function ForceChangePassword() {
       toast.success('Password updated successfully. Welcome to KaziLog!');
       navigate(getDefaultRoute(data.role), { replace: true });
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to update password');
+      toast.error(extractApiError(error, 'Failed to update password'));
     } finally {
       setLoading(false);
     }

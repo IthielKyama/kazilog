@@ -3,11 +3,16 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-    "start": "node ./scripts/start-expo-with-logs.cjs",
+    "setup": "npm install",
+    "dev": "node ./scripts/start-expo-with-logs.cjs",
+    "start": "npm run dev",
     "start:plain": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
+    "dev:android": "node ./scripts/start-expo-with-logs.cjs --android",
+    "dev:ios": "node ./scripts/start-expo-with-logs.cjs --ios",
+    "dev:web": "node ./scripts/start-expo-with-logs.cjs --web",
+    "android": "npm run dev:android",
+    "ios": "npm run dev:ios",
+    "web": "npm run dev:web",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
