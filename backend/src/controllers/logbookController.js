@@ -32,10 +32,26 @@ exports.getActiveStudentSession = asyncHandler(async (req, res) => {
 // @route   POST /api/logs
 // @access  Private (Student only)
 exports.submitLog = asyncHandler(async (req, res) => {
-  const { sessionId, tasksDone, skillsLearned, latitude, longitude } = req.body;
+  let { sessionId, tasksDone, skillsLearned, latitude, longitude, idempotencyKey } = req.body;
   const studentId = req.user.id;
 
-  if (!sessionId || !tasksDone || !skillsLearned || latitude === undefined || longitude === undefined) {
+  // Idempotency check: prevent duplicate submissions
+  if (idempotencyKey) {
+    const existingLog = await LogbookEntry.findOne({ idempotencyKey, student: studentId });
+    if (existingLog) {
+      return res.status(200).json({
+        success: true,
+        data: existingLog,
+        message: 'Duplicate submission prevented by idempotency key.'
+      });
+    }
+  }
+
+  // If coming from FormData, these will be strings
+  if (typeof latitude === 'string') latitude = parseFloat(latitude);
+  if (typeof longitude === 'string') longitude = parseFloat(longitude);
+
+  if (!sessionId || !tasksDone || !skillsLearned || latitude === undefined || isNaN(latitude) || longitude === undefined || isNaN(longitude)) {
     res.status(400);
     throw new Error('Please provide all required fields including GPS coordinates');
   }
@@ -80,7 +96,9 @@ exports.submitLog = asyncHandler(async (req, res) => {
       coordinates: [longitude, latitude] // GeoJSON format: [lon, lat]
     },
     distanceFromCompanyMeters: distance,
-    isWithinBoundary
+    isWithinBoundary,
+    imageUrl: req.file ? `/uploads/${req.file.filename}` : undefined,
+    idempotencyKey
   });
 
   res.status(201).json({

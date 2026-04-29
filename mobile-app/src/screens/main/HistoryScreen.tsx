@@ -1,19 +1,15 @@
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useLayoutEffect, useState } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
 
-import { InfoCard } from '../components/InfoCard';
-import { useAuth } from '../context/AuthContext';
-import { RootStackParamList } from '../navigation/AppNavigator';
+import { InfoCard } from '../../components/InfoCard';
+import { useAuth } from '../../context/AuthContext';
+import { MainTabParamList } from '../../navigation/TabNavigator';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'History'>;
+type Props = BottomTabScreenProps<MainTabParamList, 'History'>;
 
-const statusStyles = {
-  Pending: 'bg-amber-100 text-amber-800',
-  Approved: 'bg-emerald-100 text-emerald-800',
-  Rejected: 'bg-rose-100 text-rose-800',
-} as const;
+import { LogStatusBadge } from '../../components/logs/LogStatusBadge';
 
 export function HistoryScreen({ navigation }: Props) {
   const { logs, pendingLogs, refreshSessionData } = useAuth();
@@ -74,9 +70,7 @@ export function HistoryScreen({ navigation }: Props) {
                   <Text className="flex-1 text-sm font-semibold text-ink">
                     {new Date(log.date || log.createdAt).toLocaleDateString()}
                   </Text>
-                  <View className={`rounded-full px-3 py-1 ${statusStyles[log.supervisorStatus]}`}>
-                    <Text className="text-xs font-semibold">{log.supervisorStatus}</Text>
-                  </View>
+                  <LogStatusBadge status={log.supervisorStatus} />
                 </View>
 
                 <Text className="mt-3 text-sm font-medium text-ink">Tasks</Text>
