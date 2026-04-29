@@ -2,10 +2,10 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Text, TextInput, View } from 'react-native';
 
-import { PrimaryButton } from '../components/PrimaryButton';
-import { useAuth } from '../context/AuthContext';
-import { extractApiError } from '../services/api';
-import { RootStackParamList } from '../navigation/AppNavigator';
+import { PrimaryButton } from '../../components/PrimaryButton';
+import { useAuth } from '../../context/AuthContext';
+import { extractApiError } from '../../services/api';
+import { RootStackParamList } from '../../navigation/AppNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ChangePassword'>;
 

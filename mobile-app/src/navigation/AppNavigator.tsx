@@ -3,16 +3,14 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import { useAuth } from '../context/AuthContext';
-import { DailyLogScreen } from '../screens/DailyLogScreen';
-import { ForceChangePasswordScreen } from '../screens/ForceChangePasswordScreen';
-import { HistoryScreen } from '../screens/HistoryScreen';
-import { LoginScreen } from '../screens/LoginScreen';
+import { ForceChangePasswordScreen } from '../screens/auth/ForceChangePasswordScreen';
+import { LoginScreen } from '../screens/auth/LoginScreen';
+import { TabNavigator } from './TabNavigator';
 
 export type RootStackParamList = {
   Login: undefined;
   ChangePassword: undefined;
-  DailyLog: undefined;
-  History: undefined;
+  Main: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -52,10 +50,7 @@ export function AppNavigator() {
             options={{ title: 'Change Password', gestureEnabled: false }}
           />
         ) : (
-          <>
-            <Stack.Screen name="DailyLog" component={DailyLogScreen} options={{ title: 'Daily Log' }} />
-            <Stack.Screen name="History" component={HistoryScreen} options={{ title: 'Submission History' }} />
-          </>
+          <Stack.Screen name="Main" component={TabNavigator} options={{ headerShown: false }} />
         )}
       </Stack.Navigator>
     </NavigationContainer>
