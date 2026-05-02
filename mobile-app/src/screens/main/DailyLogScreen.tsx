@@ -14,6 +14,8 @@ import { getResilientCoordinates } from '../../utils/location';
 import { syncManager } from '../../utils/SyncManager';
 import { FloatingLabelInput } from '../../components/FloatingLabelInput';
 
+const DEV_GPS_FALLBACK_ENABLED = __DEV__;
+
 export function DailyLogScreen({ navigation }: any) {
   const {
     activeSession,
@@ -142,14 +144,14 @@ export function DailyLogScreen({ navigation }: any) {
 
     let { coords, error } = await getResilientCoordinates();
 
-    // Fallback to company location if GPS capture fails (DEVELOPMENT ONLY - to prevent student bypass in production)
-    if (!coords && __DEV__ && activeSession?.company?.location?.coordinates) {
+    // Development convenience only: production submissions still require live GPS.
+    if (!coords && DEV_GPS_FALLBACK_ENABLED && activeSession?.company?.location?.coordinates) {
       coords = {
         latitude: activeSession.company.location.coordinates[1],
         longitude: activeSession.company.location.coordinates[0],
       };
-    } else if (!coords && __DEV__) {
-      // Ultimate fallback if no session data available (DEVELOPMENT ONLY)
+    } else if (!coords && DEV_GPS_FALLBACK_ENABLED) {
+      // Final dev fallback so emulator testing is still possible without GPS hardware.
       coords = { latitude: -1.2921, longitude: 36.8219 };
     }
 

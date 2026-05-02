@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckSquare, Check, X, Clock, MapPin } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import { api, buildAuthConfig, extractApiError } from '../lib/api';
+import { CustomSelect } from '../components/CustomSelect';
 
 export default function SupervisorDashboard() {
   const [logs, setLogs] = useState([]);
@@ -10,6 +11,14 @@ export default function SupervisorDashboard() {
   const [statusFilter, setStatusFilter] = useState('Pending');
   const [comments, setComments] = useState({});
   const token = useAuthStore(state => state.token);
+  const user = useAuthStore(state => state.user);
+
+  const statusOptions = [
+    { value: 'All', label: 'All' },
+    { value: 'Pending', label: 'Pending' },
+    { value: 'Approved', label: 'Approved' },
+    { value: 'Rejected', label: 'Rejected' },
+  ];
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -52,19 +61,22 @@ export default function SupervisorDashboard() {
             <CheckSquare className="text-brand" size={32} /> Logbook Reviews
           </h1>
           <p className="text-slate-500 mt-2">Review and manage daily tasks submitted by your attached students.</p>
+          {user?.role === 'admin' && (
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-brand mt-3">
+              Development preview: supervisor workflow
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-slate-700">Filter by Status:</label>
-          <select 
+          <div className="w-44">
+            <CustomSelect
+            options={statusOptions}
             value={statusFilter} 
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none"
-          >
-            <option value="All">All</option>
-            <option value="Pending">Pending</option>
-            <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
-          </select>
+            onChange={setStatusFilter}
+            placeholder="Select status"
+          />
+          </div>
         </div>
       </div>
 

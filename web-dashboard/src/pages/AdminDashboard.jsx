@@ -1,51 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Building, MapPin, Save, UserPlus, Briefcase, ChevronDown, Check, LayoutDashboard } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Building, MapPin, Save, UserPlus, Briefcase, LayoutDashboard } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import { api, buildAuthConfig, extractApiError } from '../lib/api';
-
-// --- Custom Select Component (No Browser Defaults) ---
-const CustomSelect = ({ options, value, onChange, placeholder }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <div className="relative">
-      <div
-        className="w-full px-4 py-2 border border-slate-300 rounded-lg flex items-center justify-between cursor-pointer bg-white focus-within:ring-2 focus-within:ring-brand focus-within:border-brand transition-all"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <span className={value ? "text-slate-900" : "text-slate-400"}>
-          {value ? options.find(o => o.value === value)?.label : placeholder}
-        </span>
-        <ChevronDown size={18} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </div>
-
-      {isOpen && (
-        <>
-          {/* Invisible backdrop to close dropdown when clicking outside */}
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
-          <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-2">
-            {options.map((option) => (
-              <div
-                key={option.value}
-                className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors"
-                onClick={() => {
-                  onChange(option.value);
-                  setIsOpen(false);
-                }}
-              >
-                <span className={value === option.value ? "font-medium text-brand" : "text-slate-700"}>
-                  {option.label}
-                </span>
-                {value === option.value && <Check size={16} className="text-brand" />}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-};
+import { CustomSelect, StyledDateInput } from '../components/CustomSelect';
 
 
 export default function AdminDashboard() {
@@ -141,7 +99,7 @@ export default function AdminDashboard() {
 
 // --- Company Form ---
 function CompanyForm({ onSuccess }) {
-  const [formData, setFormData] = useState({ name: '', address: '', latitude: '', longitude: '', allowedRadiusMeters: 200 });
+  const [formData, setFormData] = useState({ name: '', address: '', latitude: '', longitude: '', allowedRadiusMeters: '200' });
   const [loading, setLoading] = useState(false);
   const token = useAuthStore(state => state.token);
 
@@ -163,7 +121,7 @@ function CompanyForm({ onSuccess }) {
         icon: '🏢',
         style: { borderRadius: '10px', background: '#333', color: '#fff' }
       });
-      setFormData({ name: '', address: '', latitude: '', longitude: '', allowedRadiusMeters: 200 });
+      setFormData({ name: '', address: '', latitude: '', longitude: '', allowedRadiusMeters: '200' });
       if (onSuccess) onSuccess();
     } catch (error) {
       toast.error(extractApiError(error, 'Failed to register company.'));
@@ -180,8 +138,9 @@ function CompanyForm({ onSuccess }) {
 
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Company Name</label>
+          <label htmlFor="company-name" className="block text-sm font-medium text-slate-700 mb-1">Company Name</label>
           <input
+            id="company-name"
             type="text"
             required
             value={formData.name}
@@ -192,8 +151,9 @@ function CompanyForm({ onSuccess }) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Physical Address</label>
+          <label htmlFor="company-address" className="block text-sm font-medium text-slate-700 mb-1">Physical Address</label>
           <input
+            id="company-address"
             type="text"
             required
             value={formData.address}
@@ -205,12 +165,13 @@ function CompanyForm({ onSuccess }) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Latitude</label>
+            <label htmlFor="company-latitude" className="block text-sm font-medium text-slate-700 mb-1">Latitude</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                 <MapPin size={16} />
               </div>
               <input
+                id="company-latitude"
                 type="number"
                 step="any"
                 required
@@ -222,12 +183,13 @@ function CompanyForm({ onSuccess }) {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Longitude</label>
+            <label htmlFor="company-longitude" className="block text-sm font-medium text-slate-700 mb-1">Longitude</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                 <MapPin size={16} />
               </div>
               <input
+                id="company-longitude"
                 type="number"
                 step="any"
                 required
@@ -241,12 +203,13 @@ function CompanyForm({ onSuccess }) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Allowed GPS Radius (Meters)</label>
+          <label htmlFor="company-radius" className="block text-sm font-medium text-slate-700 mb-1">Allowed GPS Radius (Meters)</label>
           <input
+            id="company-radius"
             type="number"
             required
             value={formData.allowedRadiusMeters}
-            onChange={(e) => setFormData({ ...formData, allowedRadiusMeters: parseInt(e.target.value) })}
+            onChange={(e) => setFormData({ ...formData, allowedRadiusMeters: e.target.value })}
             className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
           />
           <p className="text-xs text-slate-500 mt-2">
@@ -318,8 +281,9 @@ function UserForm({ onSuccess }) {
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+            <label htmlFor="user-name" className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
             <input
+              id="user-name"
               type="text"
               required
               value={formData.name}
@@ -328,8 +292,9 @@ function UserForm({ onSuccess }) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+            <label htmlFor="user-email" className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
             <input
+              id="user-email"
               type="email"
               required
               value={formData.email}
@@ -356,8 +321,9 @@ function UserForm({ onSuccess }) {
 
         {formData.role === 'student' && (
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Registration Number</label>
+            <label htmlFor="registration-number" className="block text-sm font-medium text-slate-700 mb-1">Registration Number</label>
             <input
+              id="registration-number"
               type="text"
               required
               value={formData.registrationNumber}
@@ -439,8 +405,9 @@ function SessionForm({ companies, users, onSuccess }) {
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-40">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Student</label>
+            <label htmlFor="session-student" className="block text-sm font-medium text-slate-700 mb-1">Student</label>
             <CustomSelect
+              inputId="session-student"
               options={studentOptions}
               value={formData.student}
               onChange={(val) => setFormData({ ...formData, student: val })}
@@ -448,8 +415,9 @@ function SessionForm({ companies, users, onSuccess }) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Company</label>
+            <label htmlFor="session-company" className="block text-sm font-medium text-slate-700 mb-1">Company</label>
             <CustomSelect
+              inputId="session-company"
               options={companyOptions}
               value={formData.company}
               onChange={(val) => setFormData({ ...formData, company: val })}
@@ -460,8 +428,9 @@ function SessionForm({ companies, users, onSuccess }) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-30">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Industry Supervisor</label>
+            <label htmlFor="session-supervisor" className="block text-sm font-medium text-slate-700 mb-1">Industry Supervisor</label>
             <CustomSelect
+              inputId="session-supervisor"
               options={supervisorOptions}
               value={formData.supervisor}
               onChange={(val) => setFormData({ ...formData, supervisor: val })}
@@ -469,8 +438,9 @@ function SessionForm({ companies, users, onSuccess }) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">School Assessor</label>
+            <label htmlFor="session-assessor" className="block text-sm font-medium text-slate-700 mb-1">School Assessor</label>
             <CustomSelect
+              inputId="session-assessor"
               options={assessorOptions}
               value={formData.assessor}
               onChange={(val) => setFormData({ ...formData, assessor: val })}
@@ -481,23 +451,21 @@ function SessionForm({ companies, users, onSuccess }) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
-            <input
-              type="date"
+            <label htmlFor="session-start-date" className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
+            <StyledDateInput
+              id="session-start-date"
               required
               value={formData.startDate}
               onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
-            <input
-              type="date"
+            <label htmlFor="session-end-date" className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
+            <StyledDateInput
+              id="session-end-date"
               required
               value={formData.endDate}
               onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
             />
           </div>
         </div>

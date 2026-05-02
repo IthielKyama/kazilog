@@ -1,49 +1,31 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Users, GraduationCap, ChevronDown, Check, X, Search, FileText } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Users, GraduationCap, X, Search, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import { api, buildAuthConfig, extractApiError } from '../lib/api';
+import { CustomSelect } from '../components/CustomSelect';
 
-// Custom Select Component for Grading (No Browser Defaults)
 const GradeSelect = ({ value, onChange, disabled }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const grades = ['Pending', 'A', 'B', 'C', 'D', 'E', 'F'];
+  const gradeOptions = ['Pending', 'A', 'B', 'C', 'D', 'E', 'F'].map((grade) => ({
+    value: grade,
+    label: grade,
+  }));
 
   return (
-    <div className={`relative ${disabled ? 'opacity-50' : ''}`}>
-      <div 
-        className={`px-4 py-2 border rounded-lg flex items-center justify-between cursor-pointer transition-all ${
-          value === 'Pending' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700 font-bold'
-        }`}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
-      >
-        <span>{value}</span>
-        {!disabled && <ChevronDown size={16} className={`ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />}
-      </div>
-
-      {isOpen && !disabled && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
-          <div className="absolute right-0 z-50 mt-1 w-32 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-2">
-            {grades.map((grade) => (
-              <div 
-                key={grade}
-                className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors"
-                onClick={() => {
-                  onChange(grade);
-                  setIsOpen(false);
-                }}
-              >
-                <span className={value === grade ? "font-bold text-brand" : "text-slate-700 font-medium"}>
-                  {grade}
-                </span>
-                {value === grade && <Check size={16} className="text-brand" />}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
+    <CustomSelect
+      options={gradeOptions}
+      value={value}
+      onChange={onChange}
+      placeholder="Grade"
+      disabled={disabled}
+      className={disabled ? 'opacity-50' : ''}
+      buttonClassName={`${
+        value === 'Pending'
+          ? 'bg-amber-50 border-amber-200 text-amber-700'
+          : 'bg-emerald-50 border-emerald-200 text-emerald-700 font-bold'
+      }`}
+      menuClassName="right-0"
+    />
   );
 };
 
@@ -135,6 +117,7 @@ export default function AssessorDashboard() {
   
   const [selectedSession, setSelectedSession] = useState(null);
   const token = useAuthStore(state => state.token);
+  const user = useAuthStore(state => state.user);
 
   useEffect(() => {
     const fetchAssignedSessions = async () => {
@@ -183,6 +166,17 @@ export default function AssessorDashboard() {
     return Array.from(companies);
   }, [sessions]);
 
+  const statusOptions = [
+    { value: 'All', label: 'All Statuses' },
+    { value: 'Active', label: 'Active' },
+    { value: 'Completed', label: 'Completed' },
+  ];
+
+  const companyOptions = [
+    { value: 'All', label: 'All Companies' },
+    ...uniqueCompanies.map((company) => ({ value: company, label: company })),
+  ];
+
   return (
     <div className="py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in duration-500">
       <div className="mb-8 flex flex-col lg:flex-row lg:items-end justify-between gap-4">
@@ -191,6 +185,11 @@ export default function AssessorDashboard() {
             <GraduationCap className="text-brand" size={32} /> Assessor Dashboard
           </h1>
           <p className="text-slate-500 mt-2">Track the progress of your assigned students and submit final grades.</p>
+          {user?.role === 'admin' && (
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-brand mt-3">
+              Development preview: assessor workflow
+            </p>
+          )}
         </div>
         
         {/* Filters */}
@@ -205,23 +204,24 @@ export default function AssessorDashboard() {
               className="pl-9 pr-4 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-brand outline-none"
             />
           </div>
-          <select 
+          <div className="min-w-40">
+            <CustomSelect
+            options={statusOptions}
             value={statusFilter} 
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-brand outline-none"
-          >
-            <option value="All">All Statuses</option>
-            <option value="Active">Active</option>
-            <option value="Completed">Completed</option>
-          </select>
-          <select 
+            onChange={setStatusFilter}
+            placeholder="Status"
+            buttonClassName="text-sm rounded-md py-2"
+          />
+          </div>
+          <div className="min-w-52">
+            <CustomSelect
+            options={companyOptions}
             value={companyFilter} 
-            onChange={(e) => setCompanyFilter(e.target.value)}
-            className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-brand outline-none max-w-[200px]"
-          >
-            <option value="All">All Companies</option>
-            {uniqueCompanies.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
+            onChange={setCompanyFilter}
+            placeholder="Company"
+            buttonClassName="text-sm rounded-md py-2"
+          />
+          </div>
         </div>
       </div>
 
@@ -262,6 +262,7 @@ export default function AssessorDashboard() {
                           onClick={() => setSelectedSession(session)}
                           className="p-1.5 text-brand hover:bg-brand/10 rounded-md transition-colors"
                           title="View Logs"
+                          aria-label={`View logs for ${session.student?.name}`}
                         >
                           <FileText size={18} />
                         </button>

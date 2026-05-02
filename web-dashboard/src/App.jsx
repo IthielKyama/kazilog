@@ -1,5 +1,6 @@
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
-import { MapPin, Users, CheckSquare, LayoutDashboard, Settings } from 'lucide-react';
+import { MapPin, Users, CheckSquare, LayoutDashboard, Settings, Shield } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 import AdminDashboard from './pages/AdminDashboard';
 import { useAuthStore } from './store/authStore';
@@ -40,17 +41,17 @@ function Navbar() {
             </Link>
             {['supervisor', 'admin'].includes(user?.role) && (
               <Link to="/reviews" className={navLinkClass('/reviews')}>
-                <CheckSquare size={18} /> Reviews
+                <CheckSquare size={18} /> {user?.role === 'admin' ? 'Supervisor View' : 'Reviews'}
               </Link>
             )}
             {['assessor', 'admin'].includes(user?.role) && (
               <Link to="/students" className={navLinkClass('/students')}>
-                <Users size={18} /> Students
+                <Users size={18} /> {user?.role === 'admin' ? 'Assessor View' : 'Students'}
               </Link>
             )}
             {['admin', 'supervisor', 'assessor'].includes(user?.role) && (
               <Link to="/admin" className={navLinkClass('/admin')}>
-                <Settings size={18} /> Admin
+                <Settings size={18} /> Admin Setup
               </Link>
             )}
           </div>
@@ -77,7 +78,51 @@ function Navbar() {
   );
 }
 
+function RoleRoute({ allowedRoles, children }) {
+  const user = useAuthStore(state => state.user);
+
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (!allowedRoles.includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+}
+
 function DashboardPlaceholder() {
+  const user = useAuthStore(state => state.user);
+
+  const actions = [
+    {
+      to: '/admin',
+      title: user?.role === 'admin' ? 'System Setup' : 'Admin Setup',
+      description: 'Manage users, companies, and attachment sessions.',
+      icon: Settings,
+      visible: ['admin', 'supervisor', 'assessor'].includes(user?.role),
+    },
+    {
+      to: '/reviews',
+      title: user?.role === 'admin' ? 'Supervisor Workflow Preview' : 'Review Student Logs',
+      description: user?.role === 'admin'
+        ? 'Open the supervisor experience exactly as a reviewer would see it during development.'
+        : 'Approve or reject student daily log submissions.',
+      icon: CheckSquare,
+      visible: ['admin', 'supervisor'].includes(user?.role),
+    },
+    {
+      to: '/students',
+      title: user?.role === 'admin' ? 'Assessor Workflow Preview' : 'Track Assigned Students',
+      description: user?.role === 'admin'
+        ? 'Open the assessor experience and verify grading flows without changing accounts.'
+        : 'Inspect approved logs and submit final grades.',
+      icon: Users,
+      visible: ['admin', 'assessor'].includes(user?.role),
+    },
+  ].filter(action => action.visible);
+
   return (
     <div className="py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
@@ -85,10 +130,44 @@ function DashboardPlaceholder() {
         <p className="text-slate-500 mt-2">Your central dashboard for managing industrial attachments.</p>
       </div>
       
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 flex flex-col items-center justify-center">
-         <LayoutDashboard size={48} className="mb-4 text-brand/30" />
-         <h2 className="text-xl font-medium text-slate-700">Dashboard Overview</h2>
-         <p className="text-slate-500 mt-2 text-center max-w-md">Use the navigation bar above to manage companies, review logs, or track student progress based on your role.</p>
+      {user?.role === 'admin' && (
+        <div className="mb-6 rounded-xl border border-brand/20 bg-brand/5 p-4 flex items-start gap-3">
+          <Shield size={20} className="text-brand mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-slate-900">Development cross-role access is enabled.</p>
+            <p className="text-sm text-slate-600 mt-1">
+              You can open the supervisor and assessor protected views from this dashboard without switching accounts.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {actions.map((action) => {
+          const Icon = action.icon;
+
+          return (
+            <Link
+              key={action.to}
+              to={action.to}
+              className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md hover:border-brand/20 transition-all"
+            >
+              <div className="w-12 h-12 rounded-xl bg-brand/10 text-brand flex items-center justify-center mb-4">
+                <Icon size={22} />
+              </div>
+              <h2 className="text-lg font-semibold text-slate-900">{action.title}</h2>
+              <p className="text-sm text-slate-500 mt-2 leading-6">{action.description}</p>
+            </Link>
+          );
+        })}
+
+        {!actions.length && (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 flex flex-col items-center justify-center lg:col-span-3">
+             <LayoutDashboard size={48} className="mb-4 text-brand/30" />
+             <h2 className="text-xl font-medium text-slate-700">Dashboard Overview</h2>
+             <p className="text-slate-500 mt-2 text-center max-w-md">Use the navigation bar above to manage companies, review logs, or track student progress based on your role.</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -127,9 +206,9 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<DashboardPlaceholder />} />
         <Route path="/change-password" element={<Navigate to="/" replace />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/reviews" element={<SupervisorDashboard />} />
-        <Route path="/students" element={<AssessorDashboard />} />
+        <Route path="/admin" element={<RoleRoute allowedRoles={['admin', 'supervisor', 'assessor']}><AdminDashboard /></RoleRoute>} />
+        <Route path="/reviews" element={<RoleRoute allowedRoles={['admin', 'supervisor']}><SupervisorDashboard /></RoleRoute>} />
+        <Route path="/students" element={<RoleRoute allowedRoles={['admin', 'assessor']}><AssessorDashboard /></RoleRoute>} />
         <Route path="*" element={<DashboardPlaceholder />} />
       </Routes>
     </div>

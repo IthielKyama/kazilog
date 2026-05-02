@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 import { API_BASE_URL } from '../config/env';
-import { AttachmentSession, AuthResponse, LogEntry, OfflineLogPayload } from '../types';
+import { AttachmentSession, AuthResponse, LogEntry, LogSubmissionPayload } from '../types';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -51,7 +51,7 @@ export const logbookApi = {
     const { data } = await api.get<{ success: boolean; count: number; data: LogEntry[] }>('/logs/student');
     return data.data;
   },
-  async submitLog(payload: Omit<OfflineLogPayload, 'localId' | 'capturedAt'>) {
+  async submitLog(payload: LogSubmissionPayload) {
     if (payload.imageUri) {
       const formData = new FormData();
       formData.append('sessionId', payload.sessionId);
