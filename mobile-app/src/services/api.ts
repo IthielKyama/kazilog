@@ -47,8 +47,13 @@ export const logbookApi = {
     const { data } = await api.get<{ success: boolean; data: AttachmentSession }>('/logs/session/active');
     return data.data;
   },
-  async getStudentLogs() {
-    const { data } = await api.get<{ success: boolean; count: number; data: LogEntry[] }>('/logs/student');
+  async getLatestSession() {
+    const { data } = await api.get<{ success: boolean; data: AttachmentSession }>('/logs/session/latest');
+    return data.data;
+  },
+  async getStudentLogs(sessionId?: string) {
+    const params = sessionId ? { sessionId } : undefined;
+    const { data } = await api.get<{ success: boolean; count: number; data: LogEntry[] }>('/logs/student', { params });
     return data.data;
   },
   async submitLog(payload: LogSubmissionPayload) {

@@ -73,6 +73,58 @@ describe('GET /api/logs/session/active', () => {
   });
 });
 
+describe('GET /api/logs/session/latest', () => {
+  test('returns the active session when one exists', async () => {
+    const scenario = await createScenario();
+
+    const res = await request(app)
+      .get('/api/logs/session/latest')
+      .set('Authorization', `Bearer ${scenario.student.token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.data._id.toString()).toBe(scenario.session._id.toString());
+    expect(res.body.data.isActive).toBe(true);
+  });
+
+  test('returns the most recent completed session when no active session exists', async () => {
+    const scenario = await createScenario();
+    scenario.session.isActive = false;
+    scenario.session.finalGrade = 'A';
+    await scenario.session.save();
+
+    const latestCompleted = await AttachmentSession.create({
+      student: scenario.student.user._id,
+      company: scenario.company._id,
+      supervisor: scenario.supervisor.user._id,
+      assessor: scenario.assessor.user._id,
+      startDate: new Date('2026-02-01'),
+      endDate: new Date('2027-02-28'),
+      isActive: false,
+      finalGrade: 'B',
+    });
+
+    const olderCompleted = await AttachmentSession.create({
+      student: scenario.student.user._id,
+      company: scenario.company._id,
+      supervisor: scenario.supervisor.user._id,
+      assessor: scenario.assessor.user._id,
+      startDate: new Date('2024-01-01'),
+      endDate: new Date('2025-12-31'),
+      isActive: false,
+      finalGrade: 'C',
+    });
+
+    const res = await request(app)
+      .get('/api/logs/session/latest')
+      .set('Authorization', `Bearer ${scenario.student.token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.data._id.toString()).toBe(latestCompleted._id.toString());
+    expect(res.body.data._id.toString()).not.toBe(olderCompleted._id.toString());
+    expect(res.body.data.finalGrade).toBe('B');
+  });
+});
+
 describe('POST /api/logs', () => {
   test('submits a log successfully when inside the geofence', async () => {
     const scenario = await createScenario();
@@ -130,5 +182,57 @@ describe('GET /api/logs/student', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.count).toBe(1);
+  });
+
+  test('filters logs to the requested student session only', async () => {
+    const scenario = await createScenario();
+    const anotherCompany = await createCompany();
+    const anotherSession = await AttachmentSession.create({
+      student: scenario.student.user._id,
+      company: anotherCompany._id,
+      supervisor: scenario.supervisor.user._id,
+      assessor: scenario.assessor.user._id,
+      startDate: new Date('2025-01-01'),
+      endDate: new Date('2025-06-30'),
+      isActive: false,
+      finalGrade: 'A',
+    });
+
+    const targetLog = await createLogEntry(scenario.session._id, scenario.student.user._id);
+    await createLogEntry(anotherSession._id, scenario.student.user._id, {
+      tasksDone: 'Old attachment work',
+    });
+
+    const res = await request(app)
+      .get(`/api/logs/student?sessionId=${scenario.session._id}`)
+      .set('Authorization', `Bearer ${scenario.student.token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.count).toBe(1);
+    expect(res.body.data[0]._id.toString()).toBe(targetLog._id.toString());
+  });
+});
+
+describe('GET /api/logs/session/:sessionId', () => {
+  test('returns all session logs including rejected entries for the assessor', async () => {
+    const scenario = await createScenario();
+
+    await createLogEntry(scenario.session._id, scenario.student.user._id, {
+      supervisorStatus: 'Approved',
+      supervisorComment: 'Solid work',
+    });
+    await createLogEntry(scenario.session._id, scenario.student.user._id, {
+      supervisorStatus: 'Rejected',
+      supervisorComment: 'Please improve detail',
+      tasksDone: 'Incomplete entry',
+    });
+
+    const res = await request(app)
+      .get(`/api/logs/session/${scenario.session._id}`)
+      .set('Authorization', `Bearer ${scenario.assessor.token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.count).toBe(2);
+    expect(res.body.data.map((log) => log.supervisorStatus).sort()).toEqual(['Approved', 'Rejected']);
   });
 });

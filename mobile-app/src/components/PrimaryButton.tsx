@@ -1,4 +1,5 @@
 import { ActivityIndicator, Pressable, Text } from 'react-native';
+import { useTheme } from '../theme/ThemeContext';
 
 type PrimaryButtonProps = {
   label: string;
@@ -16,20 +17,20 @@ export function PrimaryButton({
   tone = 'primary',
 }: PrimaryButtonProps) {
   const isPrimary = tone === 'primary';
+  const { colors } = useTheme();
 
   return (
     <Pressable
       accessibilityRole="button"
       disabled={disabled || loading}
       onPress={onPress}
-      className={`h-12 items-center justify-center rounded-xl px-4 ${
-        isPrimary ? 'bg-brand' : 'bg-slate-200'
-      } ${(disabled || loading) ? 'opacity-60' : ''}`}
+      className={`h-12 items-center justify-center rounded-xl px-4 ${(disabled || loading) ? 'opacity-60' : ''}`}
+      style={{ backgroundColor: isPrimary ? colors.brand : colors.surfaceMuted }}
     >
       {loading ? (
-        <ActivityIndicator color={isPrimary ? '#ffffff' : '#0f172a'} />
+        <ActivityIndicator color={isPrimary ? '#ffffff' : colors.text} />
       ) : (
-        <Text className={`text-base font-semibold ${isPrimary ? 'text-white' : 'text-slate-900'}`}>
+        <Text className="text-base font-semibold" style={{ color: isPrimary ? '#ffffff' : colors.text }}>
           {label}
         </Text>
       )}

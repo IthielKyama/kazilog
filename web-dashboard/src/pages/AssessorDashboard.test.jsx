@@ -86,4 +86,62 @@ describe('AssessorDashboard', () => {
       );
     });
   });
+
+  test('shows overview metrics and filters modal logs by week', async () => {
+    const user = userEvent.setup();
+
+    apiMock.get
+      .mockReset()
+      .mockResolvedValueOnce({
+        data: {
+          data: [
+            {
+              _id: 'session-1',
+              isActive: true,
+              finalGrade: 'Pending',
+              student: { name: 'Amina Njeri', registrationNumber: 'TVET-ATT-2026-001' },
+              company: { name: 'Demo Company' },
+              stats: { approvedLogs: 1, totalLogs: 2 },
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          data: [
+            {
+              _id: 'log-1',
+              date: '2026-05-12T00:00:00.000Z',
+              tasksDone: 'Configured user accounts',
+              skillsLearned: 'Identity provisioning',
+              supervisorComment: 'Good progress.',
+              supervisorStatus: 'Approved',
+              isWithinBoundary: true,
+            },
+            {
+              _id: 'log-2',
+              date: '2026-05-01T00:00:00.000Z',
+              tasksDone: 'Prepared inventory sheet',
+              skillsLearned: 'Stock handling',
+              supervisorComment: '',
+              supervisorStatus: 'Pending',
+              isWithinBoundary: true,
+            },
+          ],
+        },
+      });
+
+    render(<AssessorDashboard />);
+
+    expect((await screen.findAllByText(/assigned students/i)).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('1').length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole('button', { name: /view logs for amina njeri/i }));
+    expect(await screen.findByText(/logs for amina njeri/i)).toBeInTheDocument();
+    expect(screen.getByText(/configured user accounts/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /27 apr - 03 may 2026/i }));
+    expect(screen.getByText(/prepared inventory sheet/i)).toBeInTheDocument();
+    expect(screen.queryByText(/configured user accounts/i)).not.toBeInTheDocument();
+  });
 });

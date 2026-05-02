@@ -12,8 +12,7 @@ const { protect, authorize } = require('../middlewares/authMiddleware');
 
 // Protect and restrict all admin routes
 router.use(protect);
-// Temporarily allowing 'supervisor' or 'assessor' to act as admin for easier testing
-router.use(authorize('admin', 'supervisor', 'assessor'));
+router.use(authorize('admin'));
 
 router.route('/companies')
   .post(createCompany)
