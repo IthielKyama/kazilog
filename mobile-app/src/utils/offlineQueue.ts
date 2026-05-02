@@ -2,6 +2,7 @@ import NetInfo from '@react-native-community/netinfo';
 
 import { logbookApi } from '../services/api';
 import { offlineLogStorage } from '../services/storage';
+import { LogSubmissionPayload } from '../types';
 
 export const syncOfflineLogs = async () => {
   const networkState = await NetInfo.fetch();
@@ -13,16 +14,19 @@ export const syncOfflineLogs = async () => {
   let synced = 0;
 
   for (const queuedLog of queuedLogs) {
-    await logbookApi.submitLog({
+    const payload: LogSubmissionPayload = {
+      idempotencyKey: queuedLog.idempotencyKey,
       sessionId: queuedLog.sessionId,
       tasksDone: queuedLog.tasksDone,
       skillsLearned: queuedLog.skillsLearned,
       latitude: queuedLog.latitude,
       longitude: queuedLog.longitude,
       imageUri: queuedLog.imageUri,
-    });
+    };
 
-    await offlineLogStorage.removeLog(queuedLog.localId);
+    await logbookApi.submitLog(payload);
+
+    await offlineLogStorage.removeLog(queuedLog.idempotencyKey);
     synced += 1;
   }
 

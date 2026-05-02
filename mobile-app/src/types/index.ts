@@ -67,3 +67,8 @@ export type OfflineLogPayload = {
   lastError?: string;
   nextRetryAt?: number;
 };
+
+export type LogSubmissionPayload = Pick<
+  OfflineLogPayload,
+  'idempotencyKey' | 'sessionId' | 'tasksDone' | 'skillsLearned' | 'latitude' | 'longitude' | 'imageUri'
+>;
