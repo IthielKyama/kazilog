@@ -71,6 +71,20 @@ describe('POST /api/admin/companies', () => {
       .send({ name: 'Student Co', address: 'Addr', latitude: -1, longitude: 36 });
     expect(res.statusCode).toBe(403);
   });
+
+  test('returns 403 for supervisor role', async () => {
+    const { token } = await makeUser('supervisor');
+    const res = await request(app).post('/api/admin/companies').set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Supervisor Co', address: 'Addr', latitude: -1, longitude: 36 });
+    expect(res.statusCode).toBe(403);
+  });
+
+  test('returns 403 for assessor role', async () => {
+    const { token } = await makeUser('assessor');
+    const res = await request(app).post('/api/admin/companies').set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Assessor Co', address: 'Addr', latitude: -1, longitude: 36 });
+    expect(res.statusCode).toBe(403);
+  });
 });
 
 describe('GET /api/admin/companies', () => {

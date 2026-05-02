@@ -3,7 +3,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View, ActivityIndicator, Image, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { differenceInWeeks, parseISO } from 'date-fns';
+import { differenceInWeeks, format, parseISO } from 'date-fns';
 import { Camera, MapPin, X } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import * as Crypto from 'expo-crypto';
@@ -13,6 +13,7 @@ import { extractApiError, logbookApi } from '../../services/api';
 import { getResilientCoordinates } from '../../utils/location';
 import { syncManager } from '../../utils/SyncManager';
 import { FloatingLabelInput } from '../../components/FloatingLabelInput';
+import { useTheme } from '../../theme/ThemeContext';
 
 const DEV_GPS_FALLBACK_ENABLED = __DEV__;
 
@@ -32,6 +33,7 @@ export function DailyLogScreen({ navigation }: any) {
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const { colors } = useTheme();
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -208,22 +210,23 @@ export function DailyLogScreen({ navigation }: any) {
 
   return (
     <ScrollView
-      className="flex-1 bg-surface"
+      className="flex-1"
+      style={{ backgroundColor: colors.background }}
       contentContainerStyle={{ padding: 16, gap: 16 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#0f766e" />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.brand} />}
     >
       {progress && (
-        <View className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+        <View className="rounded-2xl p-4 shadow-sm border" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
           <View className="flex-row justify-between items-center mb-2">
-            <Text className="text-sm font-semibold text-slate-700">Attachment Progress</Text>
-            <Text className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">
+            <Text className="text-sm font-semibold" style={{ color: colors.textMuted }}>Attachment Progress</Text>
+            <Text className="text-xs font-bold px-2 py-1 rounded-md" style={{ color: colors.brand, backgroundColor: colors.brandSoft }}>
               Week {progress.currentWeek} of {progress.totalWeeks}
             </Text>
           </View>
-          <View className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+          <View className="h-2 w-full rounded-full overflow-hidden" style={{ backgroundColor: colors.surfaceMuted }}>
             <View 
-              className="h-full bg-emerald-500 rounded-full" 
-              style={{ width: `${progress.percentage}%` }} 
+              className="h-full rounded-full" 
+              style={{ backgroundColor: colors.brand, width: `${progress.percentage}%` }}
             />
           </View>
         </View>
@@ -234,30 +237,40 @@ export function DailyLogScreen({ navigation }: any) {
         const failedMessage = pendingLogs.find(log => log.syncState === 'failed')?.lastError;
         
         return (
-          <View className={`rounded-2xl p-4 border ${hasFailed ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+          <View
+            className="rounded-2xl p-4 border"
+            style={{
+              backgroundColor: hasFailed ? colors.dangerSoft : colors.warningSoft,
+              borderColor: hasFailed ? colors.danger : colors.warning,
+            }}
+          >
             <View className="flex-row justify-between items-center mb-2">
-              <Text className={`${hasFailed ? 'text-red-800' : 'text-amber-800'} font-semibold text-sm`}>
+              <Text className="font-semibold text-sm" style={{ color: hasFailed ? colors.danger : colors.warning }}>
                 Offline Queue ({pendingLogs.length})
               </Text>
               <Text 
-                className="text-brand font-bold text-sm" 
+                className="font-bold text-sm" 
+                style={{ color: colors.brand }}
                 onPress={() => syncNow().catch((error) => setMessage(extractApiError(error)))}
               >
                 {syncState.syncing ? 'Syncing...' : (hasFailed ? 'Retry Failed' : 'Sync Now')}
               </Text>
             </View>
-            <Text className={`text-xs ${hasFailed ? 'text-red-700' : 'text-amber-700'}`}>
+            <Text className="text-xs" style={{ color: hasFailed ? colors.danger : colors.warning }}>
               {hasFailed ? `Error: ${failedMessage}` : (syncState.lastMessage || 'Waiting for internet connection to sync logs.')}
             </Text>
           </View>
         );
       })()}
 
-      <View className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 mb-6">
+      <View className="rounded-3xl p-6 shadow-sm border mb-6" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
         <View className="mb-6">
-          <Text className="text-xl font-bold text-slate-800">Today's Log</Text>
+          <Text className="text-xl font-bold" style={{ color: colors.text }}>Today's Log</Text>
+          <Text className="mt-2 text-sm" style={{ color: colors.textSoft }}>
+            {format(new Date(), 'EEEE, dd MMMM yyyy')}
+          </Text>
           {!activeSession && (
-             <Text className="text-sm text-amber-600 mt-2">
+             <Text className="text-sm mt-2" style={{ color: colors.warning }}>
                Waiting for active session to enable submissions.
              </Text>
           )}
@@ -293,10 +306,11 @@ export function DailyLogScreen({ navigation }: any) {
           ) : (
             <TouchableOpacity 
               onPress={pickImage}
-              className="flex-row items-center bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl"
+              className="flex-row items-center px-4 py-3 rounded-xl"
+              style={{ backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border }}
             >
-              <Camera size={20} color="#64748b" />
-              <Text className="ml-2 text-slate-600 font-medium">Attach Photo</Text>
+              <Camera size={20} color={colors.textSoft} />
+              <Text className="ml-2 font-medium" style={{ color: colors.textMuted }}>Attach Photo</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -304,9 +318,10 @@ export function DailyLogScreen({ navigation }: any) {
         <TouchableOpacity
           onPress={handleSubmit}
           disabled={submitting || !tasksDone || !skillsLearned || !activeSession}
-          className={`w-full flex-row justify-center items-center py-4 rounded-2xl ${
-            tasksDone && skillsLearned && activeSession ? 'bg-emerald-600 shadow-md shadow-emerald-200' : 'bg-slate-300'
-          }`}
+          className="w-full flex-row justify-center items-center py-4 rounded-2xl"
+          style={{
+            backgroundColor: tasksDone && skillsLearned && activeSession ? colors.brand : colors.borderStrong,
+          }}
         >
           {submitting ? (
             <>
@@ -321,6 +336,12 @@ export function DailyLogScreen({ navigation }: any) {
           )}
         </TouchableOpacity>
       </View>
+
+      {message ? (
+        <Text className="text-sm" style={{ color: colors.danger }}>
+          {message}
+        </Text>
+      ) : null}
     </ScrollView>
   );
 }

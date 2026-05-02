@@ -28,6 +28,29 @@ exports.getActiveStudentSession = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get the latest attachment session for the logged-in student
+// @route   GET /api/logs/session/latest
+// @access  Private (Student only)
+exports.getLatestStudentSession = asyncHandler(async (req, res) => {
+  const session = await AttachmentSession.findOne({
+    student: req.user.id,
+  })
+    .populate('company', 'name address location allowedRadiusMeters')
+    .populate('supervisor', 'name email')
+    .populate('assessor', 'name email')
+    .sort({ isActive: -1, endDate: -1, createdAt: -1 });
+
+  if (!session) {
+    res.status(404);
+    throw new Error('No attachment session found for this student');
+  }
+
+  res.status(200).json({
+    success: true,
+    data: session,
+  });
+});
+
 // @desc    Submit a daily logbook entry with GPS verification
 // @route   POST /api/logs
 // @access  Private (Student only)
@@ -111,7 +134,23 @@ exports.submitLog = asyncHandler(async (req, res) => {
 // @route   GET /api/logs/student
 // @access  Private (Student only)
 exports.getStudentLogs = asyncHandler(async (req, res) => {
-  const logs = await LogbookEntry.find({ student: req.user.id }).sort('-date');
+  const filter = { student: req.user.id };
+
+  if (req.query.sessionId) {
+    const session = await AttachmentSession.findOne({
+      _id: req.query.sessionId,
+      student: req.user.id,
+    }).select('_id');
+
+    if (!session) {
+      res.status(404);
+      throw new Error('Attachment session not found for this student');
+    }
+
+    filter.session = session._id;
+  }
+
+  const logs = await LogbookEntry.find(filter).sort('-date');
   res.status(200).json({
     success: true,
     count: logs.length,
@@ -203,7 +242,7 @@ exports.getSessionLogs = asyncHandler(async (req, res) => {
      throw new Error('Not authorized to view logs for this session');
   }
 
-  const logs = await LogbookEntry.find({ session: sessionId, supervisorStatus: 'Approved' }).sort('-date');
+  const logs = await LogbookEntry.find({ session: sessionId }).sort('-date');
 
   res.status(200).json({
     success: true,

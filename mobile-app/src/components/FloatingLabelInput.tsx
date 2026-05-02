@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TextInputProps, Animated } from 'react-native';
+import { View, Text, TextInput, TextInputProps } from 'react-native';
+import { useTheme } from '../theme/ThemeContext';
 
 interface Props extends TextInputProps {
   label: string;
@@ -8,6 +9,7 @@ interface Props extends TextInputProps {
 
 export function FloatingLabelInput({ label, error, onFocus, onBlur, ...props }: Props) {
   const [isFocused, setIsFocused] = useState(false);
+  const { colors } = useTheme();
 
   const handleFocus = (e: any) => {
     setIsFocused(true);
@@ -21,22 +23,24 @@ export function FloatingLabelInput({ label, error, onFocus, onBlur, ...props }: 
 
   return (
     <View className="mb-4">
-      <Text className="text-sm font-semibold text-slate-600 mb-2">{label}</Text>
+      <Text className="text-sm font-semibold mb-2" style={{ color: colors.textMuted }}>{label}</Text>
       <View 
-        className={`border rounded-2xl bg-slate-50 ${
-          isFocused ? 'border-emerald-500 bg-white' : error ? 'border-rose-500' : 'border-slate-200'
-        }`}
+        className="border rounded-2xl"
+        style={{
+          borderColor: isFocused ? colors.brand : error ? colors.danger : colors.border,
+          backgroundColor: isFocused ? colors.surface : colors.input,
+        }}
       >
         <TextInput
           {...props}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          className={`p-4 text-slate-800 text-base ${props.multiline ? 'min-h-[100px]' : 'h-14'}`}
-          placeholderTextColor="#94a3b8"
-          style={[{ textAlignVertical: props.multiline ? 'top' : 'center' }, props.style]}
+          className={`p-4 text-base ${props.multiline ? 'min-h-[100px]' : 'h-14'}`}
+          placeholderTextColor={colors.textSoft}
+          style={[{ textAlignVertical: props.multiline ? 'top' : 'center', color: colors.text }, props.style]}
         />
       </View>
-      {error && <Text className="text-xs text-rose-500 mt-1">{error}</Text>}
+      {error && <Text className="text-xs mt-1" style={{ color: colors.danger }}>{error}</Text>}
     </View>
   );
 }

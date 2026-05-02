@@ -5,6 +5,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { ForceChangePasswordScreen } from '../screens/auth/ForceChangePasswordScreen';
 import { LoginScreen } from '../screens/auth/LoginScreen';
+import { useTheme } from '../theme/ThemeContext';
 import { TabNavigator } from './TabNavigator';
 
 export type RootStackParamList = {
@@ -26,6 +27,7 @@ function SplashScreen() {
 
 export function AppNavigator() {
   const { booting, user } = useAuth();
+  const { colors } = useTheme();
 
   if (booting) {
     return <SplashScreen />;
@@ -36,9 +38,10 @@ export function AppNavigator() {
       <Stack.Navigator
         screenOptions={{
           headerShadowVisible: false,
-          headerStyle: { backgroundColor: '#f8fafc' },
-          headerTitleStyle: { color: '#0f172a', fontWeight: '600' },
-          contentStyle: { backgroundColor: '#f8fafc' },
+          headerStyle: { backgroundColor: colors.background },
+          headerTitleStyle: { color: colors.text, fontWeight: '600' },
+          headerTintColor: colors.text,
+          contentStyle: { backgroundColor: colors.background },
         }}
       >
         {!user ? (

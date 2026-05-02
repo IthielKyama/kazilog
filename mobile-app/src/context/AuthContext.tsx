@@ -12,6 +12,7 @@ type AuthContextValue = {
   user: AuthUser | null;
   token: string | null;
   activeSession: AttachmentSession | null;
+  latestSession: AttachmentSession | null;
   logs: LogEntry[];
   pendingLogs: OfflineLogPayload[];
   syncState: { syncing: boolean; lastMessage: string | null };
@@ -22,6 +23,7 @@ type AuthContextValue = {
   refreshPendingLogs: () => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   syncNow: () => Promise<void>;
+  retryOfflineLog: (idempotencyKey: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -31,6 +33,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [activeSession, setActiveSession] = useState<AttachmentSession | null>(null);
+  const [latestSession, setLatestSession] = useState<AttachmentSession | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [pendingLogs, setPendingLogs] = useState<OfflineLogPayload[]>([]);
   const [syncState, setSyncState] = useState<{ syncing: boolean; lastMessage: string | null }>({
@@ -45,27 +48,41 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const refreshSessionData = useCallback(async () => {
     if (!user || user.role !== 'student') {
       setActiveSession(null);
+      setLatestSession(null);
       setLogs([]);
       return;
     }
 
-    try {
-      const [session, studentLogs] = await Promise.all([
-        logbookApi.getActiveSession(),
-        logbookApi.getStudentLogs(),
-      ]);
-      setActiveSession(session);
-      setLogs(studentLogs);
-    } catch (error) {
-      const message = extractApiError(error);
+    const [activeResult, latestResult] = await Promise.allSettled([
+      logbookApi.getActiveSession(),
+      logbookApi.getLatestSession(),
+    ]);
+
+    if (activeResult.status === 'fulfilled') {
+      setActiveSession(activeResult.value);
+    } else {
+      const message = extractApiError(activeResult.reason);
       if (/no active attachment session/i.test(message)) {
         setActiveSession(null);
-        setLogs([]);
-        return;
+      } else {
+        throw activeResult.reason;
       }
-
-      throw error;
     }
+
+    if (latestResult.status === 'fulfilled') {
+      setLatestSession(latestResult.value);
+      setLogs(await logbookApi.getStudentLogs(latestResult.value._id));
+      return;
+    }
+
+    const latestMessage = extractApiError(latestResult.reason);
+    if (/no attachment session found/i.test(latestMessage)) {
+      setLatestSession(null);
+      setLogs([]);
+      return;
+    }
+
+    throw latestResult.reason;
   }, [user]);
 
   const syncNow = useCallback(async () => {
@@ -86,6 +103,24 @@ export function AuthProvider({ children }: PropsWithChildren) {
       throw error;
     }
   }, [refreshPendingLogs, refreshSessionData, token]);
+
+  const retryOfflineLog = useCallback(
+    async (idempotencyKey: string) => {
+      setSyncState({ syncing: true, lastMessage: 'Retrying selected log...' });
+
+      try {
+        await syncManager.retryLog(idempotencyKey);
+        await refreshPendingLogs();
+        await refreshSessionData();
+        setSyncState({ syncing: false, lastMessage: 'Selected log synced.' });
+      } catch (error) {
+        await refreshPendingLogs();
+        setSyncState({ syncing: false, lastMessage: extractApiError(error) });
+        throw error;
+      }
+    },
+    [refreshPendingLogs, refreshSessionData],
+  );
 
   const applyAuth = useCallback(async (nextUser: AuthUser, nextToken: string) => {
     await authStorage.setUser(nextUser);
@@ -138,6 +173,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setUser(null);
     setToken(null);
     setActiveSession(null);
+    setLatestSession(null);
     setLogs([]);
     await authStorage.clearToken();
     await authStorage.clearUser();
@@ -204,6 +240,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       user,
       token,
       activeSession,
+      latestSession,
       logs,
       pendingLogs,
       syncState,
@@ -214,18 +251,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
       refreshPendingLogs,
       changePassword,
       syncNow,
+      retryOfflineLog,
     }),
     [
       activeSession,
       booting,
       changePassword,
       login,
+      latestSession,
       logout,
       logs,
       pendingLogs,
       queueOfflineLog,
       refreshPendingLogs,
       refreshSessionData,
+      retryOfflineLog,
       syncNow,
       syncState,
       token,
