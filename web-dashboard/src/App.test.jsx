@@ -18,9 +18,12 @@ describe('App role navigation', () => {
 
     render(<App />);
 
-    expect(screen.getAllByRole('link', { name: /admin setup/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: /^overview$/i }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('link', { name: /companies/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^users$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /attachment sessions/i })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /reviews/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /students/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /student reviews/i })).not.toBeInTheDocument();
   });
 
   test('shows review navigation for supervisors only', () => {
@@ -31,8 +34,24 @@ describe('App role navigation', () => {
 
     render(<App />);
 
-    expect(screen.queryByRole('link', { name: /admin setup/i })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /^overview$/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: /reviews/i }).length).toBeGreaterThan(0);
-    expect(screen.queryByRole('link', { name: /students/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /student reviews/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /companies/i })).not.toBeInTheDocument();
+  });
+
+  test('shows overview and student review navigation for assessors', () => {
+    useAuthStore.setState({
+      user: { _id: 'assessor-1', name: 'Assessor User', email: 'assessor@test.com', role: 'assessor', mustChangePassword: false },
+      token: 'assessor-token',
+    });
+
+    render(<App />);
+
+    expect(screen.getAllByRole('link', { name: /^overview$/i }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('link', { name: /^student reviews$/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^dashboard$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^reviews$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /companies/i })).not.toBeInTheDocument();
   });
 });

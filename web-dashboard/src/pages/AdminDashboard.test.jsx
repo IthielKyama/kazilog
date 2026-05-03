@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
@@ -44,9 +44,8 @@ describe('AdminDashboard', () => {
     const user = userEvent.setup();
     apiMock.post.mockResolvedValueOnce({ data: { success: true } });
 
-    render(<AdminDashboard />);
+    render(<AdminDashboard activeTab="companies" />);
 
-    await user.click(screen.getByRole('button', { name: /register company/i }));
     await user.type(screen.getByLabelText(/company name/i), 'Safaricom PLC');
     await user.type(screen.getByLabelText(/physical address/i), 'Waiyaki Way, Nairobi');
     await user.type(screen.getByLabelText(/latitude/i), '-1.286389');
@@ -76,9 +75,8 @@ describe('AdminDashboard', () => {
     const user = userEvent.setup();
     apiMock.post.mockResolvedValueOnce({ data: { success: true } });
 
-    render(<AdminDashboard />);
+    render(<AdminDashboard activeTab="sessions" />);
 
-    await user.click(screen.getAllByRole('button', { name: /create session/i })[0]);
     await user.click(screen.getByRole('button', { name: /^student$/i }));
     await user.click(screen.getByRole('option', { name: /amina njeri/i }));
     await user.click(screen.getByRole('button', { name: /^company$/i }));
@@ -89,7 +87,9 @@ describe('AdminDashboard', () => {
     await user.click(screen.getByRole('option', { name: /dr\. peter otieno/i }));
     await user.type(screen.getByLabelText(/start date/i), '2026-05-01');
     await user.type(screen.getByLabelText(/end date/i), '2026-08-31');
-    await user.click(screen.getAllByRole('button', { name: /create session/i })[1]);
+    const sessionForm = screen.getByRole('button', { name: /create session/i }).closest('form');
+    expect(sessionForm).not.toBeNull();
+    fireEvent.submit(sessionForm);
 
     await waitFor(() => {
       expect(apiMock.post).toHaveBeenCalledWith(

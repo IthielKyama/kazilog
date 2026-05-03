@@ -10,23 +10,40 @@ type PasswordInputProps = TextInputProps & {
 
 export function PasswordInput({ label, style, ...props }: PasswordInputProps) {
   const [visible, setVisible] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const { colors } = useTheme();
 
   return (
     <View>
-      <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
+      <Text
+        style={{
+          marginBottom: 8,
+          fontSize: 13,
+          fontWeight: '600',
+          color: isFocused ? colors.brand : colors.text,
+        }}
+      >
         {label}
       </Text>
       <View
-        className="h-12 flex-row items-center rounded-xl border px-4"
-        style={{ borderColor: colors.border, backgroundColor: colors.input }}
+        style={{
+          height: 52,
+          flexDirection: 'row',
+          alignItems: 'center',
+          borderRadius: 14,
+          borderWidth: isFocused ? 2 : 1,
+          borderColor: isFocused ? colors.brand : colors.border,
+          backgroundColor: colors.input,
+          paddingHorizontal: 16,
+        }}
       >
         <TextInput
           {...props}
           secureTextEntry={!visible}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           placeholderTextColor={colors.textSoft}
-          className="flex-1 text-base"
-          style={[{ color: colors.text }, style]}
+          style={[{ flex: 1, fontSize: 15, color: colors.text }, style]}
         />
         <Pressable onPress={() => setVisible((current) => !current)} hitSlop={8}>
           {visible ? <EyeOff size={18} color={colors.textSoft} /> : <Eye size={18} color={colors.textSoft} />}

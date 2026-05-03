@@ -1,10 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Building, MapPin, Save, UserPlus, Briefcase, LayoutDashboard, Users, Building2, ClipboardList } from 'lucide-react';
+import { Building, MapPin, Save, UserPlus, Briefcase, LayoutDashboard, Users, Building2, ClipboardList, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuthStore } from '../store/authStore';
 import { api, buildAuthConfig, extractApiError } from '../lib/api';
 import { CustomSelect, StyledDateInput } from '../components/CustomSelect';
+
+function SurfaceCard({ children, className = '' }) {
+  return <div className={`rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl shadow-xl shadow-slate-200/40 ${className}`}>{children}</div>;
+}
 
 function SummaryCard({ label, value, hint }) {
   return (
@@ -16,8 +20,7 @@ function SummaryCard({ label, value, hint }) {
   );
 }
 
-export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState('overview');
+export default function AdminDashboard({ activeTab = 'overview' }) {
   const [companies, setCompanies] = useState([]);
   const [users, setUsers] = useState([]);
   const [sessions, setSessions] = useState([]);
@@ -56,15 +59,8 @@ export default function AdminDashboard() {
     sessions: sessions.length,
   }), [companies, users, sessions]);
 
-  const tabs = [
-    { key: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { key: 'company', label: 'Register Company', icon: Building },
-    { key: 'user', label: 'Register User', icon: UserPlus },
-    { key: 'session', label: 'Create Session', icon: Briefcase },
-  ];
-
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">Admin Setup Workspace</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
@@ -72,51 +68,39 @@ export default function AdminDashboard() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard label="Companies" value={summary.companies} hint="Registered workplaces available for session assignment." />
-        <SummaryCard label="Users" value={summary.users} hint="Total accounts created across all attachment roles." />
-        <SummaryCard label="Students" value={summary.students} hint="Students currently available for session creation." />
-        <SummaryCard label="Sessions" value={summary.sessions} hint="Attachment sessions already configured in the system." />
-      </div>
 
-      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap gap-2 border-b border-slate-200 p-3">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const active = activeTab === tab.key;
 
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition-colors ${
-                  active ? 'bg-brand text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-              >
-                <Icon size={18} /> {tab.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="p-8">
-          {activeTab === 'overview' && (
-            <div className="space-y-10">
-              <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-                <SessionList sessions={sessions} loading={loadingData} />
-                <SetupGuidance />
-              </div>
-              <div className="grid gap-10 xl:grid-cols-2">
-                <UserList users={users} loading={loadingData} />
-                <CompanyList companies={companies} loading={loadingData} />
-              </div>
+      <SurfaceCard className="p-8">
+        {activeTab === 'overview' && (
+          <div className="space-y-10">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <SummaryCard label="Total Users" value={summary.users} hint="All registered accounts" />
+              <SummaryCard label="Students" value={summary.students} hint="Registered student accounts" />
+              <SummaryCard label="Companies" value={summary.companies} hint="Registered workplace locations" />
+              <SummaryCard label="Sessions" value={summary.sessions} hint="Configured attachment sessions" />
             </div>
-          )}
-          {activeTab === 'company' && <CompanyForm onSuccess={fetchData} />}
-          {activeTab === 'user' && <UserForm onSuccess={fetchData} />}
-          {activeTab === 'session' && <SessionForm companies={companies} users={users} onSuccess={fetchData} />}
-        </div>
-      </div>
+            <SetupGuidance />
+          </div>
+        )}
+        {activeTab === 'companies' && (
+          <div className="grid gap-8 xl:grid-cols-2 xl:items-start">
+            <CompanyForm onSuccess={fetchData} />
+            <CompanyList companies={companies} loading={loadingData} />
+          </div>
+        )}
+        {activeTab === 'users' && (
+          <div className="grid gap-8 xl:grid-cols-2 xl:items-start">
+            <UserForm onSuccess={fetchData} />
+            <UserList users={users} loading={loadingData} />
+          </div>
+        )}
+        {activeTab === 'sessions' && (
+          <div className="grid gap-8 xl:grid-cols-2 xl:items-start">
+            <SessionForm companies={companies} users={users} onSuccess={fetchData} />
+            <SessionList sessions={sessions} loading={loadingData} />
+          </div>
+        )}
+      </SurfaceCard>
     </div>
   );
 }
@@ -538,9 +522,10 @@ function CompanyList({ companies, loading }) {
   return (
     <div>
       <SectionHeading icon={Building2} title="Registered Companies" description="Saved workplaces students can be attached to for logging." />
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <table className="w-full text-left text-sm text-slate-500">
-          <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.18em] text-slate-500">
+      <div className="overflow-hidden rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl shadow-xl shadow-slate-200/40">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-500">
+            <thead className="border-b border-slate-200/60 bg-slate-50/80 text-xs font-bold uppercase tracking-wider text-slate-500">
             <tr>
               <th className="px-6 py-3">Name</th>
               <th className="px-6 py-3">Address</th>
@@ -556,7 +541,8 @@ function CompanyList({ companies, loading }) {
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -569,9 +555,10 @@ function UserList({ users, loading }) {
   return (
     <div>
       <SectionHeading icon={Users} title="Registered Users" description="Accounts available for session assignment and review workflows." />
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <table className="w-full text-left text-sm text-slate-500">
-          <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.18em] text-slate-500">
+      <div className="overflow-hidden rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl shadow-xl shadow-slate-200/40">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-500">
+            <thead className="border-b border-slate-200/60 bg-slate-50/80 text-xs font-bold uppercase tracking-wider text-slate-500">
             <tr>
               <th className="px-6 py-3">Name</th>
               <th className="px-6 py-3">Role</th>
@@ -587,7 +574,8 @@ function UserList({ users, loading }) {
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -600,9 +588,10 @@ function SessionList({ sessions, loading }) {
   return (
     <div>
       <SectionHeading icon={Briefcase} title="Configured Attachment Sessions" description="Student attachments currently defined in the system." />
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <table className="w-full whitespace-nowrap text-left text-sm text-slate-500">
-          <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.18em] text-slate-500">
+      <div className="overflow-hidden rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl shadow-xl shadow-slate-200/40">
+        <div className="overflow-x-auto">
+          <table className="w-full whitespace-nowrap text-left text-sm text-slate-500">
+            <thead className="border-b border-slate-200/60 bg-slate-50/80 text-xs font-bold uppercase tracking-wider text-slate-500">
             <tr>
               <th className="px-6 py-3">Student Name</th>
               <th className="px-6 py-3">Company</th>
@@ -631,6 +620,7 @@ function SessionList({ sessions, loading }) {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

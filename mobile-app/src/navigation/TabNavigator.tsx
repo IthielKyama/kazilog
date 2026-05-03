@@ -2,6 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { BarChart3, Clock, Home, User } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Platform } from 'react-native';
 
 import { BrandHeader } from '../components/BrandHeader';
 import { DailyLogScreen } from '../screens/main/DailyLogScreen';
@@ -27,28 +28,39 @@ export function TabNavigator() {
     <Tab.Navigator
       screenOptions={{
         headerShadowVisible: false,
-        headerStyle: { backgroundColor: colors.background },
+        headerStyle: {
+          backgroundColor: colors.background,
+          elevation: 0,
+          shadowOpacity: 0,
+        },
         headerTitleStyle: { color: colors.text, fontWeight: '600' },
         headerTintColor: colors.text,
         headerTitle: () => <BrandHeader />,
+        headerTitleAlign: 'center',
         tabBarStyle: {
           backgroundColor: colors.surface,
+          borderTopWidth: 1,
           borderTopColor: colors.border,
           elevation: 0,
-          shadowOpacity: 0,
+          shadowColor: '#0f172a',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.06,
+          shadowRadius: 12,
           height: 74 + insets.bottom,
-          paddingBottom: Math.max(insets.bottom, 12),
+          paddingBottom: insets.bottom + 2,
           paddingTop: 8,
         },
         tabBarActiveTintColor: colors.brand,
         tabBarInactiveTintColor: colors.tabInactive,
         tabBarItemStyle: {
-          paddingVertical: 4,
+          paddingVertical: 2,
+          gap: 2,
         },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
           paddingBottom: 2,
+          letterSpacing: 0.1,
         },
       }}
     >

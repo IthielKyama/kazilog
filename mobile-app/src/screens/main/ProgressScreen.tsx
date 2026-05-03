@@ -1,6 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Award } from 'lucide-react-native';
 
 import { InfoCard } from '../../components/InfoCard';
 import { useAuth } from '../../context/AuthContext';
@@ -60,44 +61,85 @@ export function ProgressScreen() {
     }
   };
 
+  const statCards = [
+    { label: 'Total Logs', value: summary.total, bg: colors.brandSoft, accent: colors.brand },
+    { label: 'Approved', value: summary.approved, bg: colors.successSoft ?? '#dcfce7', accent: colors.success },
+    { label: 'Pending', value: summary.pending, bg: colors.warningSoft, accent: colors.warning },
+    { label: 'Rejected', value: summary.rejected, bg: colors.dangerSoft, accent: colors.danger },
+  ];
+
   return (
     <ScrollView
-      className="flex-1"
-      style={{ backgroundColor: colors.background }}
-      contentContainerStyle={{ padding: 16, gap: 16 }}
+      style={{ flex: 1, backgroundColor: colors.background }}
+      contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 32 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />}
     >
+      {/* Summary Statistics */}
       <InfoCard title="Attachment Progress" subtitle="Track your logs, feedback, and final assessment in one place.">
-        <View className="flex-row flex-wrap gap-3">
-          {[
-            { label: 'Total Logs', value: summary.total, tone: colors.brandSoft, text: colors.brand },
-            { label: 'Approved', value: summary.approved, tone: '#dcfce7', text: colors.success },
-            { label: 'Pending', value: summary.pending, tone: colors.warningSoft, text: colors.warning },
-            { label: 'Rejected', value: summary.rejected, tone: colors.dangerSoft, text: colors.danger },
-          ].map((item) => (
-            <View key={item.label} className="rounded-2xl px-4 py-3 min-w-[46%]" style={{ backgroundColor: item.tone }}>
-              <Text className="text-xs font-semibold uppercase" style={{ color: item.text }}>{item.label}</Text>
-              <Text className="mt-2 text-2xl font-bold" style={{ color: colors.text }}>{item.value}</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+          {statCards.map((item) => (
+            <View
+              key={item.label}
+              style={{
+                minWidth: '46%',
+                flex: 1,
+                borderRadius: 18,
+                padding: 16,
+                backgroundColor: item.bg,
+              }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, color: item.accent }}>
+                {item.label}
+              </Text>
+              <Text style={{ marginTop: 8, fontSize: 28, fontWeight: '800', color: colors.text, letterSpacing: -0.5 }}>
+                {item.value}
+              </Text>
             </View>
           ))}
         </View>
       </InfoCard>
 
+      {/* Assessment Grade */}
       <InfoCard title="Assessment">
-        <View className="rounded-2xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.surfaceMuted }}>
-          <Text className="text-sm font-semibold" style={{ color: colors.textSoft }}>Final grade</Text>
-          <Text className="mt-2 text-3xl font-bold" style={{ color: colors.text }}>
+        <View
+          style={{
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.surfaceMuted,
+            padding: 20,
+            alignItems: 'center',
+          }}
+        >
+          <View
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 18,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: colors.brandSoft,
+              marginBottom: 12,
+            }}
+          >
+            <Award size={28} color={colors.brand} />
+          </View>
+          <Text style={{ fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, color: colors.textSoft }}>
+            Final grade
+          </Text>
+          <Text style={{ marginTop: 8, fontSize: 36, fontWeight: '800', color: colors.text, letterSpacing: -0.5 }}>
             {latestSession?.finalGrade || 'Pending'}
           </Text>
-          <Text className="mt-2 text-sm" style={{ color: colors.textSoft }}>
+          <Text style={{ marginTop: 8, fontSize: 13, color: colors.textSoft, textAlign: 'center', lineHeight: 20 }}>
             Grading remains managed by the assessor after reviewing your weekly progress.
           </Text>
         </View>
       </InfoCard>
 
+      {/* Weekly Log Review */}
       <InfoCard title="Weekly Log Review" subtitle="Select a week to view only that period's attachment entries.">
         {groupedLogs.length ? (
-          <View className="gap-4">
+          <View style={{ gap: 16 }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
               {groupedLogs.map((group) => {
                 const selected = selectedWeek?.key === group.key;
@@ -105,14 +147,16 @@ export function ProgressScreen() {
                   <Pressable
                     key={group.key}
                     onPress={() => setSelectedWeekKey(group.key)}
-                    className="rounded-full px-4 py-2"
                     style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 8,
+                      borderRadius: 99,
                       backgroundColor: selected ? colors.brand : colors.surfaceMuted,
                       borderWidth: 1,
                       borderColor: selected ? colors.brand : colors.border,
                     }}
                   >
-                    <Text className="text-xs font-semibold" style={{ color: selected ? '#ffffff' : colors.text }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: selected ? '#ffffff' : colors.text }}>
                       {group.label}
                     </Text>
                   </Pressable>
@@ -121,24 +165,76 @@ export function ProgressScreen() {
             </ScrollView>
 
             {selectedWeek ? (
-              <View className="rounded-2xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.surfaceMuted }}>
-                <Text className="text-sm font-semibold" style={{ color: colors.text }}>{selectedWeek.label}</Text>
-                <View className="mt-3 gap-3">
+              <View
+                style={{
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.surfaceMuted,
+                  padding: 16,
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>{selectedWeek.label}</Text>
+                <View style={{ marginTop: 12, gap: 12 }}>
                   {selectedWeek.items.map((log) => (
-                    <View key={log._id} className="rounded-xl border p-3" style={{ borderColor: colors.borderStrong, backgroundColor: colors.surface }}>
-                      <View className="flex-row items-start justify-between gap-3">
-                        <Text className="flex-1 text-sm font-semibold" style={{ color: colors.text }}>
+                    <View
+                      key={log._id}
+                      style={{
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        backgroundColor: colors.surface,
+                        padding: 14,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                        <Text style={{ flex: 1, fontSize: 14, fontWeight: '700', color: colors.text }}>
                           {formatDayLabel(getEntryDate(log))}
                         </Text>
-                        <Text className="text-xs font-semibold" style={{ color: log.supervisorStatus === 'Approved' ? colors.success : log.supervisorStatus === 'Rejected' ? colors.danger : colors.warning }}>
-                          {log.supervisorStatus}
-                        </Text>
+                        <View
+                          style={{
+                            paddingHorizontal: 10,
+                            paddingVertical: 4,
+                            borderRadius: 99,
+                            backgroundColor:
+                              log.supervisorStatus === 'Approved'
+                                ? colors.successSoft ?? '#dcfce7'
+                                : log.supervisorStatus === 'Rejected'
+                                ? colors.dangerSoft
+                                : colors.warningSoft,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 11,
+                              fontWeight: '700',
+                              color:
+                                log.supervisorStatus === 'Approved'
+                                  ? colors.success
+                                  : log.supervisorStatus === 'Rejected'
+                                  ? colors.danger
+                                  : colors.warning,
+                            }}
+                          >
+                            {log.supervisorStatus}
+                          </Text>
+                        </View>
                       </View>
-                      <Text className="mt-2 text-sm" style={{ color: colors.textMuted }}>{log.tasksDone}</Text>
+                      <Text style={{ marginTop: 8, fontSize: 14, color: colors.textMuted, lineHeight: 22 }}>{log.tasksDone}</Text>
                       {log.supervisorComment ? (
-                        <View className="mt-3 rounded-xl px-3 py-2" style={{ backgroundColor: log.supervisorStatus === 'Rejected' ? colors.dangerSoft : colors.brandSoft }}>
-                          <Text className="text-xs font-semibold uppercase" style={{ color: colors.textSoft }}>Supervisor comment</Text>
-                          <Text className="mt-1 text-sm" style={{ color: colors.text }}>{log.supervisorComment}</Text>
+                        <View
+                          style={{
+                            marginTop: 12,
+                            borderRadius: 14,
+                            paddingHorizontal: 14,
+                            paddingVertical: 10,
+                            backgroundColor: log.supervisorStatus === 'Rejected' ? colors.dangerSoft : colors.brandSoft,
+                          }}
+                        >
+                          <Text style={{ fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, color: colors.textSoft }}>
+                            Supervisor comment
+                          </Text>
+                          <Text style={{ marginTop: 4, fontSize: 14, color: colors.text, lineHeight: 22 }}>{log.supervisorComment}</Text>
                         </View>
                       ) : null}
                     </View>
@@ -148,9 +244,11 @@ export function ProgressScreen() {
             ) : null}
           </View>
         ) : (
-          <Text className="text-sm" style={{ color: colors.textSoft }}>
-            No submitted logs yet for this attachment session. Your weekly progress will appear here after your first sync.
-          </Text>
+          <View style={{ padding: 16, borderRadius: 16, backgroundColor: colors.surfaceMuted, alignItems: 'center' }}>
+            <Text style={{ fontSize: 14, color: colors.textSoft, textAlign: 'center', lineHeight: 22 }}>
+              No submitted logs yet for this attachment session. Your weekly progress will appear here after your first sync.
+            </Text>
+          </View>
         )}
       </InfoCard>
     </ScrollView>

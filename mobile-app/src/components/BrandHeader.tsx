@@ -1,13 +1,27 @@
-import { Image, View } from 'react-native';
+import { View, Text } from 'react-native';
+import { MapPin } from 'lucide-react-native';
+import { useTheme } from '../theme/ThemeContext';
 
 export function BrandHeader() {
+  const { colors } = useTheme();
+
   return (
-    <View style={{ alignItems: 'center', justifyContent: 'center', width: 220 }}>
-      <Image
-        source={require('../../assets/kazilog-horizontal-academic.png')}
-        style={{ width: 184, height: 44 }}
-        resizeMode="contain"
-      />
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+      <View
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 12,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.brand,
+        }}
+      >
+        <MapPin size={18} color="#ffffff" />
+      </View>
+      <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text, letterSpacing: -0.5 }}>
+        KaziLog
+      </Text>
     </View>
   );
 }

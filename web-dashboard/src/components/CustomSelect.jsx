@@ -35,16 +35,29 @@ export function CustomSelect({
       const rect = buttonRef.current?.getBoundingClientRect();
       if (!rect) return;
 
-      setMenuPosition({
-        top: rect.bottom + window.scrollY + 6,
-        left: rect.left + window.scrollX,
-        width: rect.width,
-      });
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const menuMaxHeight = 280;
+
+      if (spaceBelow < menuMaxHeight && spaceAbove > spaceBelow) {
+        setMenuPosition({
+          bottom: window.innerHeight - rect.top + 6,
+          left: rect.left + window.scrollX,
+          width: rect.width,
+        });
+      } else {
+        setMenuPosition({
+          top: rect.bottom + window.scrollY + 6,
+          left: rect.left + window.scrollX,
+          width: rect.width,
+        });
+      }
     };
 
     updatePosition();
 
     const handleClickOutside = (event) => {
+      if (event.target === document.documentElement) return;
       if (!containerRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) {
         setIsOpen(false);
       }
@@ -93,7 +106,7 @@ export function CustomSelect({
         onClick={handleToggle}
         className={`w-full px-4 py-2.5 border border-slate-300 rounded-lg flex items-center justify-between text-left bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-all disabled:cursor-not-allowed disabled:opacity-60 ${buttonClassName}`}
       >
-        <span className={selectedOption ? 'text-slate-900' : 'text-slate-400'}>
+        <span className={`block truncate pr-2 ${selectedOption ? 'text-slate-900' : 'text-slate-400'}`}>
           {selectedOption?.label || placeholder}
         </span>
         <ChevronDown size={18} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -108,9 +121,12 @@ export function CustomSelect({
               className={`z-[1000] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg animate-in fade-in slide-in-from-top-2 ${menuClassName}`}
               style={{
                 position: 'absolute',
-                top: menuPosition.top,
+                ...(menuPosition.top ? { top: menuPosition.top } : {}),
+                ...(menuPosition.bottom ? { bottom: menuPosition.bottom } : {}),
                 left: menuPosition.left,
                 width: menuPosition.width,
+                maxHeight: 280,
+                overflowY: 'auto',
               }}
             >
               {options.map((option) => (

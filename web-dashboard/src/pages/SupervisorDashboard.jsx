@@ -9,9 +9,9 @@ import { formatLogDay, groupLogsByWeek, getLogDate } from '../utils/logs';
 
 function SummaryCard({ label, value, hint }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</div>
-      <div className="mt-3 text-3xl font-bold text-slate-900">{value}</div>
+    <div className="rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl p-5 shadow-xl shadow-slate-200/40 transition-all hover:-translate-y-0.5">
+      <div className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</div>
+      <div className="mt-3 text-4xl font-extrabold text-slate-900 tracking-tight">{value}</div>
       <p className="mt-2 text-sm leading-6 text-slate-500">{hint}</p>
     </div>
   );
@@ -141,15 +141,15 @@ export default function SupervisorDashboard() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="min-w-48">
+        <div className="rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl p-4 shadow-xl shadow-slate-200/40">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <div className="w-full md:w-48">
               <CustomSelect options={statusOptions} value={statusFilter} onChange={setStatusFilter} placeholder="Status" />
             </div>
-            <div className="min-w-56">
+            <div className="w-full md:w-56">
               <CustomSelect options={studentOptions} value={studentFilter} onChange={setStudentFilter} placeholder="Student" />
             </div>
-            <div className="min-w-56">
+            <div className="w-full md:flex-1">
               <CustomSelect
                 options={weekOptions}
                 value={weekFilter}
@@ -166,10 +166,10 @@ export default function SupervisorDashboard() {
         <SummaryCard label="Loaded Logs" value={summary.totalLogs} hint="Logs returned for the selected review status." />
         <SummaryCard label="Students" value={summary.students} hint="Students represented in the current review pool." />
         <SummaryCard label="Pending Reviews" value={summary.pending} hint="Entries still waiting for your decision." />
-        <SummaryCard label="Selected Week" value={summary.selectedWeekLogs} hint="Entries currently shown for the chosen week." />
+        <SummaryCard label="Selected Week" value={summary.selectedWeekLogs} hint={summary.selectedWeekLogs === 1 ? "Entry currently shown for the chosen week." : "Entries currently shown for the chosen week."} />
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl shadow-xl shadow-slate-200/40 overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-slate-500">Loading supervisor review queue...</div>
         ) : !logs.length ? (
@@ -190,15 +190,16 @@ export default function SupervisorDashboard() {
               <div key={group.key} className="p-6">
                 <div className="mb-5 flex items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Week: {group.label}</h2>
-                    <p className="mt-1 text-sm text-slate-400">{group.logs.length} logs in this review window</p>
+                    <h2 className="text-sm font-bold uppercase tracking-wider text-brand">Week: {group.label}</h2>
+                    <p className="mt-1 text-sm text-slate-500">{group.logs.length} logs in this review window</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   {group.logs.map((log) => (
-                    <div key={log._id} className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
-                      <div className="flex flex-col gap-6 xl:flex-row">
+                    <div key={log._id} className="group/log rounded-3xl border border-slate-200/60 bg-white p-6 relative overflow-hidden transition-all hover:shadow-lg hover:shadow-slate-200/50 hover:-translate-y-0.5">
+                      <div className="absolute top-0 left-0 w-1.5 h-full bg-brand/20 transition-colors group-hover/log:bg-brand" />
+                      <div className="flex flex-col gap-6 xl:flex-row pl-2">
                         <div className="flex-1 space-y-4">
                           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                             <div>
@@ -219,13 +220,13 @@ export default function SupervisorDashboard() {
                           </div>
 
                           <div className="grid gap-4 lg:grid-cols-2">
-                            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                              <h4 className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Tasks Done</h4>
-                              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">{log.tasksDone}</p>
+                            <div className="rounded-2xl border border-slate-200/60 bg-slate-50/50 p-5">
+                              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Tasks Done</h4>
+                              <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{log.tasksDone}</p>
                             </div>
-                            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                              <h4 className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Skills Learned</h4>
-                              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">{log.skillsLearned}</p>
+                            <div className="rounded-2xl border border-slate-200/60 bg-slate-50/50 p-5">
+                              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Skills Learned</h4>
+                              <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{log.skillsLearned}</p>
                             </div>
                           </div>
 
@@ -250,13 +251,13 @@ export default function SupervisorDashboard() {
                           <div className="flex gap-3 xl:w-44 xl:flex-col xl:justify-end">
                             <button
                               onClick={() => handleReview(log._id, 'Approved')}
-                              className="flex-1 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-600"
+                              className="flex-1 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-bold text-white transition-all hover:bg-emerald-600 hover:-translate-y-0.5 shadow-lg shadow-emerald-500/20"
                             >
                               <span className="flex items-center justify-center gap-2"><Check size={16} /> Approve</span>
                             </button>
                             <button
                               onClick={() => handleReview(log._id, 'Rejected')}
-                              className="flex-1 rounded-2xl border border-rose-200 bg-white px-4 py-3 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50"
+                              className="flex-1 rounded-2xl border border-rose-200/60 bg-white px-4 py-3 text-sm font-bold text-rose-600 transition-all hover:bg-rose-50 hover:-translate-y-0.5 shadow-sm"
                             >
                               <span className="flex items-center justify-center gap-2"><X size={16} /> Reject</span>
                             </button>

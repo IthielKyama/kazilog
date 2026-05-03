@@ -4,7 +4,7 @@ import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View, ActivityIndicator, Image, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { differenceInWeeks, format, parseISO } from 'date-fns';
-import { Camera, MapPin, X } from 'lucide-react-native';
+import { Camera, MapPin, X, Send, Wifi, WifiOff } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import * as Crypto from 'expo-crypto';
 
@@ -208,71 +208,117 @@ export function DailyLogScreen({ navigation }: any) {
     }
   };
 
+  const isReady = !!(tasksDone && skillsLearned && activeSession);
+
   return (
     <ScrollView
-      className="flex-1"
-      style={{ backgroundColor: colors.background }}
-      contentContainerStyle={{ padding: 16, gap: 16 }}
+      style={{ flex: 1, backgroundColor: colors.background }}
+      contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 32 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.brand} />}
     >
+      {/* Progress Bar */}
       {progress && (
-        <View className="rounded-2xl p-4 shadow-sm border" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
-          <View className="flex-row justify-between items-center mb-2">
-            <Text className="text-sm font-semibold" style={{ color: colors.textMuted }}>Attachment Progress</Text>
-            <Text className="text-xs font-bold px-2 py-1 rounded-md" style={{ color: colors.brand, backgroundColor: colors.brandSoft }}>
-              Week {progress.currentWeek} of {progress.totalWeeks}
-            </Text>
+        <View
+          style={{
+            borderRadius: 20,
+            padding: 16,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.surface,
+            shadowColor: '#0f172a',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.04,
+            shadowRadius: 8,
+            elevation: 2,
+          }}
+        >
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textMuted }}>Attachment Progress</Text>
+            <View style={{ backgroundColor: colors.brandSoft, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: colors.brand }}>
+                Week {progress.currentWeek} of {progress.totalWeeks}
+              </Text>
+            </View>
           </View>
-          <View className="h-2 w-full rounded-full overflow-hidden" style={{ backgroundColor: colors.surfaceMuted }}>
-            <View 
-              className="h-full rounded-full" 
-              style={{ backgroundColor: colors.brand, width: `${progress.percentage}%` }}
+          <View style={{ height: 8, width: '100%', borderRadius: 99, backgroundColor: colors.surfaceMuted, overflow: 'hidden' }}>
+            <View
+              style={{
+                height: '100%',
+                borderRadius: 99,
+                backgroundColor: colors.brand,
+                width: `${progress.percentage}%`,
+              }}
             />
           </View>
+          <Text style={{ marginTop: 8, fontSize: 12, color: colors.textSoft }}>
+            {progress.percentage}% complete
+          </Text>
         </View>
       )}
 
+      {/* Offline Queue Banner */}
       {pendingLogs.length > 0 && (() => {
         const hasFailed = pendingLogs.some(log => log.syncState === 'failed');
         const failedMessage = pendingLogs.find(log => log.syncState === 'failed')?.lastError;
         
         return (
           <View
-            className="rounded-2xl p-4 border"
             style={{
-              backgroundColor: hasFailed ? colors.dangerSoft : colors.warningSoft,
+              borderRadius: 16,
+              padding: 16,
+              borderWidth: 1,
               borderColor: hasFailed ? colors.danger : colors.warning,
+              backgroundColor: hasFailed ? colors.dangerSoft : colors.warningSoft,
             }}
           >
-            <View className="flex-row justify-between items-center mb-2">
-              <Text className="font-semibold text-sm" style={{ color: hasFailed ? colors.danger : colors.warning }}>
-                Offline Queue ({pendingLogs.length})
-              </Text>
-              <Text 
-                className="font-bold text-sm" 
-                style={{ color: colors.brand }}
-                onPress={() => syncNow().catch((error) => setMessage(extractApiError(error)))}
-              >
-                {syncState.syncing ? 'Syncing...' : (hasFailed ? 'Retry Failed' : 'Sync Now')}
-              </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <WifiOff size={16} color={hasFailed ? colors.danger : colors.warning} />
+                <Text style={{ fontWeight: '700', fontSize: 13, color: hasFailed ? colors.danger : colors.warning }}>
+                  Offline Queue ({pendingLogs.length})
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => syncNow().catch((error) => setMessage(extractApiError(error)))}>
+                <Text style={{ fontWeight: '700', fontSize: 13, color: colors.brand }}>
+                  {syncState.syncing ? 'Syncing...' : (hasFailed ? 'Retry Failed' : 'Sync Now')}
+                </Text>
+              </TouchableOpacity>
             </View>
-            <Text className="text-xs" style={{ color: hasFailed ? colors.danger : colors.warning }}>
+            <Text style={{ fontSize: 12, color: hasFailed ? colors.danger : colors.warning }}>
               {hasFailed ? `Error: ${failedMessage}` : (syncState.lastMessage || 'Waiting for internet connection to sync logs.')}
             </Text>
           </View>
         );
       })()}
 
-      <View className="rounded-3xl p-6 shadow-sm border mb-6" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
-        <View className="mb-6">
-          <Text className="text-xl font-bold" style={{ color: colors.text }}>Today's Log</Text>
-          <Text className="mt-2 text-sm" style={{ color: colors.textSoft }}>
+      {/* Today's Log Form */}
+      <View
+        style={{
+          borderRadius: 28,
+          padding: 24,
+          borderWidth: 1,
+          borderColor: colors.border,
+          backgroundColor: colors.surface,
+          shadowColor: '#0f172a',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.06,
+          shadowRadius: 16,
+          elevation: 3,
+        }}
+      >
+        <View style={{ marginBottom: 20 }}>
+          <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text, letterSpacing: -0.3 }}>
+            Today's Log
+          </Text>
+          <Text style={{ marginTop: 6, fontSize: 14, color: colors.textSoft }}>
             {format(new Date(), 'EEEE, dd MMMM yyyy')}
           </Text>
           {!activeSession && (
-             <Text className="text-sm mt-2" style={{ color: colors.warning }}>
-               Waiting for active session to enable submissions.
-             </Text>
+            <View style={{ marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: colors.warningSoft }}>
+              <Text style={{ fontSize: 13, color: colors.warning }}>
+                Waiting for active session to enable submissions.
+              </Text>
+            </View>
           )}
         </View>
 
@@ -292,55 +338,92 @@ export function DailyLogScreen({ navigation }: any) {
           multiline
         />
 
-        <View className="flex-row items-center mb-6 mt-2">
+        {/* Image Picker */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20, marginTop: 4 }}>
           {imageUri ? (
-            <View className="relative h-20 w-20 rounded-xl overflow-hidden border border-slate-200">
-              <Image source={{ uri: imageUri }} className="h-full w-full" />
-              <TouchableOpacity 
-                className="absolute top-1 right-1 bg-black/50 rounded-full p-1"
+            <View
+              style={{
+                height: 80,
+                width: 80,
+                borderRadius: 16,
+                overflow: 'hidden',
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <Image source={{ uri: imageUri }} style={{ height: '100%', width: '100%' }} />
+              <TouchableOpacity
+                style={{
+                  position: 'absolute',
+                  top: 4,
+                  right: 4,
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  borderRadius: 99,
+                  padding: 4,
+                }}
                 onPress={() => setImageUri(null)}
               >
                 <X size={12} color="white" />
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={pickImage}
-              className="flex-row items-center px-4 py-3 rounded-xl"
-              style={{ backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border }}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                borderRadius: 14,
+                backgroundColor: colors.surfaceMuted,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
             >
               <Camera size={20} color={colors.textSoft} />
-              <Text className="ml-2 font-medium" style={{ color: colors.textMuted }}>Attach Photo</Text>
+              <Text style={{ marginLeft: 8, fontWeight: '600', color: colors.textMuted }}>Attach Photo</Text>
             </TouchableOpacity>
           )}
         </View>
 
+        {/* Submit Button */}
         <TouchableOpacity
           onPress={handleSubmit}
-          disabled={submitting || !tasksDone || !skillsLearned || !activeSession}
-          className="w-full flex-row justify-center items-center py-4 rounded-2xl"
+          disabled={submitting || !isReady}
+          activeOpacity={0.8}
           style={{
-            backgroundColor: tasksDone && skillsLearned && activeSession ? colors.brand : colors.borderStrong,
+            width: '100%',
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingVertical: 16,
+            borderRadius: 18,
+            backgroundColor: isReady ? colors.brand : colors.borderStrong,
+            shadowColor: isReady ? colors.brand : 'transparent',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: isReady ? 0.3 : 0,
+            shadowRadius: 12,
+            elevation: isReady ? 4 : 0,
           }}
         >
           {submitting ? (
             <>
               <ActivityIndicator color="white" />
-              <Text className="text-white font-semibold text-lg ml-3">Getting GPS...</Text>
+              <Text style={{ color: 'white', fontWeight: '700', fontSize: 16, marginLeft: 12 }}>Getting GPS...</Text>
             </>
           ) : (
             <>
               <MapPin size={20} color="white" />
-              <Text className="text-white font-semibold text-lg ml-2">Capture & Submit</Text>
+              <Text style={{ color: 'white', fontWeight: '700', fontSize: 16, marginLeft: 8 }}>Capture & Submit</Text>
             </>
           )}
         </TouchableOpacity>
       </View>
 
       {message ? (
-        <Text className="text-sm" style={{ color: colors.danger }}>
-          {message}
-        </Text>
+        <View style={{ padding: 12, borderRadius: 12, backgroundColor: colors.dangerSoft }}>
+          <Text style={{ fontSize: 13, color: colors.danger }}>{message}</Text>
+        </View>
       ) : null}
     </ScrollView>
   );

@@ -14,7 +14,7 @@ import ForceChangePassword from './pages/ForceChangePassword';
 import { api, buildAuthConfig, extractApiError } from './lib/api';
 
 function SurfaceCard({ children, className = '' }) {
-  return <div className={`rounded-2xl border border-slate-200 bg-white shadow-sm ${className}`}>{children}</div>;
+  return <div className={`rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl shadow-xl shadow-slate-200/40 ${className}`}>{children}</div>;
 }
 
 function Navbar() {
@@ -24,42 +24,59 @@ function Navbar() {
 
   const navLinkClass = (path) => {
     const active = location.pathname === path;
-    return `flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-      active ? 'bg-brand text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+    return `flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all duration-300 ${
+      active ? 'bg-brand/10 text-brand shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
     }`;
   };
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <nav className="sticky top-0 z-50 border-b border-slate-200/60 bg-white/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand text-white shadow-sm">
-            <MapPin size={22} />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-brand-dark text-white shadow-md shadow-brand/20">
+            <MapPin size={20} />
           </div>
           <div>
-            <div className="text-lg font-bold tracking-tight text-slate-900">KaziLog</div>
-            <div className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Attachment Workflow</div>
+            <div className="text-xl font-bold tracking-tight text-slate-900">KaziLog</div>
           </div>
         </div>
 
-        <div className="hidden items-center gap-2 md:flex">
-          <Link to="/" className={navLinkClass('/')}>
-            <LayoutDashboard size={16} /> Dashboard
-          </Link>
+        <div className="hidden items-center gap-1 md:flex">
           {user?.role === 'supervisor' && (
-            <Link to="/reviews" className={navLinkClass('/reviews')}>
-              <CheckSquare size={16} /> Reviews
-            </Link>
+            <>
+              <Link to="/" className={navLinkClass('/')}>
+                <LayoutDashboard size={16} /> Overview
+              </Link>
+              <Link to="/reviews" className={navLinkClass('/reviews')}>
+                <CheckSquare size={16} /> Reviews
+              </Link>
+            </>
           )}
           {user?.role === 'assessor' && (
-            <Link to="/students" className={navLinkClass('/students')}>
-              <Users size={16} /> Students
-            </Link>
+            <>
+              <Link to="/" className={navLinkClass('/')}>
+                <LayoutDashboard size={16} /> Overview
+              </Link>
+              <Link to="/students" className={navLinkClass('/students')}>
+                <ClipboardList size={16} /> Student Reviews
+              </Link>
+            </>
           )}
           {user?.role === 'admin' && (
-            <Link to="/admin" className={navLinkClass('/admin')}>
-              <Settings size={16} /> Admin Setup
-            </Link>
+            <>
+              <Link to="/" className={navLinkClass('/')}>
+                <LayoutDashboard size={16} /> Overview
+              </Link>
+              <Link to="/companies" className={navLinkClass('/companies')}>
+                <Building2 size={16} /> Companies
+              </Link>
+              <Link to="/users" className={navLinkClass('/users')}>
+                <Users size={16} /> Users
+              </Link>
+              <Link to="/sessions" className={navLinkClass('/sessions')}>
+                <Settings size={16} /> Attachment Sessions
+              </Link>
+            </>
           )}
         </div>
 
@@ -102,60 +119,122 @@ function DashboardAction({ to, icon: Icon, title, description, badge }) {
   return (
     <Link
       to={to}
-      className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand/25 hover:shadow-md"
+      className="group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white p-6 shadow-xl shadow-slate-200/40 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-brand/10"
     >
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand">
-          <Icon size={22} />
+      <div className="absolute inset-0 bg-gradient-to-br from-brand/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      <div className="relative z-10">
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand/10 text-brand transition-transform duration-300 group-hover:scale-110 group-hover:bg-brand group-hover:text-white shadow-sm">
+            <Icon size={24} />
+          </div>
+          {badge ? (
+            <span className="rounded-full border border-brand/20 bg-brand/5 px-3 py-1 text-xs font-bold uppercase tracking-wider text-brand">{badge}</span>
+          ) : null}
         </div>
-        {badge ? (
-          <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">{badge}</span>
-        ) : null}
-      </div>
-      <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-      <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p>
-      <div className="mt-4 flex items-center gap-2 text-sm font-semibold text-brand">
-        Open <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+        <h2 className="text-xl font-bold text-slate-900">{title}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-slate-500">{description}</p>
+        <div className="mt-6 flex items-center gap-2 text-sm font-bold text-brand">
+          Open Workspace <ArrowRight size={16} className="transition-transform group-hover:translate-x-1.5" />
+        </div>
       </div>
     </Link>
   );
 }
 
 function SupervisorHome() {
+  const token = useAuthStore(state => state.token);
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      setLoading(true);
+      setError('');
+
+      try {
+        const { data } = await api.get('/logs/supervisor?status=All', buildAuthConfig(token));
+        setLogs(data.data || []);
+      } catch (err) {
+        setError(extractApiError(err, 'Failed to load supervisor overview.'));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void fetchLogs();
+  }, [token]);
+
+  const summary = useMemo(() => {
+    const totalLogs = logs.length;
+    const pendingLogs = logs.filter(log => log.supervisorStatus === 'Pending').length;
+    const approvedLogs = logs.filter(log => log.supervisorStatus === 'Approved').length;
+    
+    const studentSet = new Set();
+    logs.forEach(log => {
+      if (log.student?._id) studentSet.add(log.student._id);
+    });
+    const totalStudents = studentSet.size;
+
+    return { totalLogs, pendingLogs, approvedLogs, totalStudents };
+  }, [logs]);
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Supervisor Dashboard</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-          Review student submissions week by week, leave comments, and keep approvals moving without losing context.
-        </p>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Supervisor Overview</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+            Monitor student log submissions, track pending reviews, and keep approvals moving.
+          </p>
+        </div>
+        <Link
+          to="/reviews"
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition-all hover:bg-slate-800 hover:-translate-y-0.5"
+        >
+          Open Reviews <ArrowRight size={16} />
+        </Link>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {[
+          ['Assigned Students', summary.totalStudents, 'Students logging under your supervision.'],
+          ['Total Logs', summary.totalLogs, 'Total logbook entries submitted so far.'],
+          ['Pending Reviews', summary.pendingLogs, 'Logs awaiting your approval or rejection.'],
+          ['Approved Logs', summary.approvedLogs, 'Logs you have successfully approved.'],
+        ].map(([label, value, hint]) => (
+          <SurfaceCard key={label} className="p-5">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</div>
+            <div className="mt-3 text-3xl font-bold text-slate-900">{value}</div>
+            <p className="mt-2 text-sm leading-6 text-slate-500">{hint}</p>
+          </SurfaceCard>
+        ))}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <DashboardAction
-          to="/reviews"
-          icon={ClipboardList}
-          title="Weekly Log Reviews"
-          description="Filter by status, student, and week to focus on one review window at a time."
-          badge="Primary workflow"
-        />
-        <SurfaceCard className="p-6 lg:col-span-2">
+        <SurfaceCard className="p-6 lg:col-span-3">
           <div className="flex items-center gap-3 text-slate-900">
             <CheckSquare className="text-brand" size={20} />
             <h2 className="text-lg font-semibold">Review guidance</h2>
           </div>
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            {[
-              ['Pending first', 'Start with pending entries so students get feedback before the week ends.'],
-              ['Use week filter', 'Narrow the screen to a single attachment week to reduce review fatigue.'],
-              ['Comment clearly', 'Leave actionable comments on rejected logs so students know what to improve.'],
-            ].map(([title, text]) => (
-              <div key={title} className="rounded-2xl bg-slate-50 p-4">
-                <div className="text-sm font-semibold text-slate-900">{title}</div>
-                <p className="mt-2 text-sm leading-6 text-slate-500">{text}</p>
-              </div>
-            ))}
-          </div>
+          {loading ? (
+            <p className="mt-6 text-sm text-slate-500">Loading supervisor overview...</p>
+          ) : error ? (
+            <p className="mt-6 text-sm text-rose-600">{error}</p>
+          ) : (
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              {[
+                ['Pending first', 'Start with pending entries so students get feedback before the week ends.'],
+                ['Use week filter', 'Narrow the screen to a single attachment week to reduce review fatigue.'],
+                ['Comment clearly', 'Leave actionable comments on rejected logs so students know what to improve.'],
+              ].map(([title, text]) => (
+                <div key={title} className="rounded-2xl bg-slate-50 p-4">
+                  <div className="text-sm font-semibold text-slate-900">{title}</div>
+                  <p className="mt-2 text-sm leading-6 text-slate-500">{text}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </SurfaceCard>
       </div>
     </div>
@@ -195,20 +274,59 @@ function AssessorHome() {
     return { assignedStudents, activeSessions, completedSessions, gradingPending };
   }, [sessions]);
 
-  const spotlight = sessions.slice(0, 3);
+  const gradingQueue = useMemo(() => (
+    sessions
+      .filter((session) => session.finalGrade === 'Pending')
+      .sort((left, right) => {
+        if (left.isActive !== right.isActive) {
+          return Number(right.isActive) - Number(left.isActive);
+        }
+
+        return (right.stats?.approvedLogs || 0) - (left.stats?.approvedLogs || 0);
+      })
+      .slice(0, 4)
+  ), [sessions]);
+
+  const coverage = useMemo(() => {
+    const companies = new Set();
+    let approvedLogs = 0;
+    let totalLogs = 0;
+
+    sessions.forEach((session) => {
+      if (session.company?.name) {
+        companies.add(session.company.name);
+      }
+
+      approvedLogs += session.stats?.approvedLogs || 0;
+      totalLogs += session.stats?.totalLogs || 0;
+    });
+
+    return {
+      companies: companies.size,
+      approvedLogs,
+      totalLogs,
+      completionRate: totalLogs ? Math.round((approvedLogs / totalLogs) * 100) : 0,
+    };
+  }, [sessions]);
+
+  const recentlyCompleted = useMemo(() => (
+    sessions
+      .filter((session) => !session.isActive)
+      .slice(0, 3)
+  ), [sessions]);
 
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Assessor Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Assessor Overview</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-            Monitor assigned students, identify grading backlog quickly, and open the student page with one focused workflow.
+            Monitor assigned students, keep an eye on grading backlog, and jump into student reviews only when you need the full grading workspace.
           </p>
         </div>
         <Link
           to="/students"
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition-all hover:bg-slate-800 hover:-translate-y-0.5"
         >
           Open Student Reviews <ArrowRight size={16} />
         </Link>
@@ -233,15 +351,15 @@ function AssessorHome() {
         <SurfaceCard className="p-6">
           <div className="flex items-center gap-3">
             <GraduationCap className="text-brand" size={20} />
-            <h2 className="text-lg font-semibold text-slate-900">Student Spotlight</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Priority grading queue</h2>
           </div>
           {loading ? (
             <p className="mt-6 text-sm text-slate-500">Loading assigned students...</p>
           ) : error ? (
             <p className="mt-6 text-sm text-rose-600">{error}</p>
-          ) : spotlight.length ? (
+          ) : gradingQueue.length ? (
             <div className="mt-5 space-y-4">
-              {spotlight.map((session) => (
+              {gradingQueue.map((session) => (
                 <div key={session._id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -262,77 +380,90 @@ function AssessorHome() {
                       <div className="mt-1 text-sm text-slate-700">{session.stats.approvedLogs} approved / {session.stats.totalLogs} total</div>
                     </div>
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Session</div>
-                      <div className="mt-1 text-sm text-slate-700">{session.isActive ? 'Active' : 'Completed'}</div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Next focus</div>
+                      <div className="mt-1 text-sm text-slate-700">{session.isActive ? 'Track progress before grading' : 'Ready for final grade'}</div>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="mt-6 text-sm text-slate-500">No students are currently assigned to you.</p>
+            <p className="mt-6 text-sm text-slate-500">No sessions are currently waiting for a final grade.</p>
           )}
         </SurfaceCard>
 
         <SurfaceCard className="p-6">
           <div className="flex items-center gap-3">
             <Users className="text-brand" size={20} />
-            <h2 className="text-lg font-semibold text-slate-900">Recommended workflow</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Coverage snapshot</h2>
           </div>
-          <div className="mt-5 space-y-4">
-            {[
-              'Open the student page to scan grading backlog first.',
-              'Use the log modal week filter to review one week at a time.',
-              'Assign final grades without losing access to full log history.',
-            ].map((item) => (
-              <div key={item} className="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600">
-                {item}
+          {loading ? (
+            <p className="mt-6 text-sm text-slate-500">Loading assessor coverage...</p>
+          ) : error ? (
+            <p className="mt-6 text-sm text-rose-600">{error}</p>
+          ) : (
+            <div className="mt-5 space-y-4">
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Companies Covered</div>
+                <div className="mt-2 text-2xl font-bold text-slate-900">{coverage.companies}</div>
+                <p className="mt-2 text-sm leading-6 text-slate-500">Distinct workplaces across your current assignment load.</p>
               </div>
-            ))}
-          </div>
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Approved Log Progress</div>
+                <div className="mt-2 text-2xl font-bold text-slate-900">{coverage.approvedLogs} / {coverage.totalLogs}</div>
+                <p className="mt-2 text-sm leading-6 text-slate-500">{coverage.completionRate}% of all visible logs have already cleared supervisor review.</p>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Recently Completed</div>
+                {recentlyCompleted.length ? (
+                  <div className="mt-3 space-y-2">
+                    {recentlyCompleted.map((session) => (
+                      <div key={session._id} className="flex items-center justify-between gap-3 rounded-2xl bg-white px-3 py-2">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-semibold text-slate-900">{session.student?.name}</div>
+                          <div className="truncate text-xs text-slate-500">{session.company?.name}</div>
+                        </div>
+                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                          {session.finalGrade}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm leading-6 text-slate-500">Completed sessions will appear here after final grading.</p>
+                )}
+              </div>
+            </div>
+          )}
         </SurfaceCard>
       </div>
-    </div>
-  );
-}
 
-function AdminHome() {
-  return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Admin Dashboard</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-          Keep the platform setup clean and operational by focusing on users, companies, and attachment sessions in one place.
-        </p>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <DashboardAction
-          to="/admin"
-          icon={Settings}
-          title="Admin Setup"
-          description="Create companies, register users, and assign attachment sessions without leaving the setup workspace."
-          badge="Setup only"
-        />
-        <SurfaceCard className="p-6 lg:col-span-2">
-          <div className="flex items-center gap-3">
-            <Building2 className="text-brand" size={20} />
-            <h2 className="text-lg font-semibold text-slate-900">Setup checklist</h2>
+      <SurfaceCard className="p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Recommended assessor workflow</h2>
+            <p className="mt-1 text-sm text-slate-500">Keep the overview for triage, then use the student review tab only for detailed review and grading.</p>
           </div>
-          <div className="mt-5 grid gap-4 md:grid-cols-3">
-            {[
-              ['Register companies', 'Capture the workplace location and approved radius before students begin logging.'],
-              ['Create user accounts', 'Register students, supervisors, and assessors with the correct role and contact details.'],
-              ['Assign sessions', 'Connect each student to one company, one supervisor, and one assessor for the attachment window.'],
-            ].map(([title, text]) => (
-              <div key={title} className="rounded-2xl bg-slate-50 p-4">
-                <div className="text-sm font-semibold text-slate-900">{title}</div>
-                <p className="mt-2 text-sm leading-6 text-slate-500">{text}</p>
-              </div>
-            ))}
-          </div>
-        </SurfaceCard>
-      </div>
+          <Link
+            to="/students"
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-50"
+          >
+            Go To Student Reviews <ArrowRight size={16} />
+          </Link>
+        </div>
+        <div className="mt-5 grid gap-4 md:grid-cols-3">
+          {[
+            ['Start with pending grades', 'Use the queue above to spot sessions that still need a final decision.'],
+            ['Review one week at a time', 'Open a student record and use the weekly log modal to stay focused.'],
+            ['Grade without losing history', 'Completed sessions remain visible in the student reviews tab after grading.'],
+          ].map(([title, text]) => (
+            <div key={title} className="rounded-2xl bg-slate-50 p-4">
+              <div className="text-sm font-semibold text-slate-900">{title}</div>
+              <p className="mt-2 text-sm leading-6 text-slate-500">{text}</p>
+            </div>
+          ))}
+        </div>
+      </SurfaceCard>
     </div>
   );
 }
@@ -348,7 +479,7 @@ function DashboardHome() {
     return <SupervisorHome />;
   }
 
-  return <AdminHome />;
+  return <AdminDashboard activeTab="overview" />;
 }
 
 function AppContent() {
@@ -378,13 +509,15 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#f8fafc] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-brand-light/30 via-slate-50 to-slate-50">
       <Navbar />
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <Routes>
           <Route path="/" element={<DashboardHome />} />
           <Route path="/change-password" element={<Navigate to="/" replace />} />
-          <Route path="/admin" element={<RoleRoute allowedRoles={['admin']}><AdminDashboard /></RoleRoute>} />
+          <Route path="/companies" element={<RoleRoute allowedRoles={['admin']}><AdminDashboard activeTab="companies" /></RoleRoute>} />
+          <Route path="/users" element={<RoleRoute allowedRoles={['admin']}><AdminDashboard activeTab="users" /></RoleRoute>} />
+          <Route path="/sessions" element={<RoleRoute allowedRoles={['admin']}><AdminDashboard activeTab="sessions" /></RoleRoute>} />
           <Route path="/reviews" element={<RoleRoute allowedRoles={['supervisor']}><SupervisorDashboard /></RoleRoute>} />
           <Route path="/students" element={<RoleRoute allowedRoles={['assessor']}><AssessorDashboard /></RoleRoute>} />
           <Route path="*" element={<DashboardHome />} />
