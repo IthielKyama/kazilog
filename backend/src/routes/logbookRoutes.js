@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   submitLog,
   getActiveStudentSession,
+  getLatestStudentSession,
   getStudentLogs,
   getSupervisorLogs,
   reviewLog,
@@ -31,6 +32,7 @@ router.use(protect);
 
 // Student routes
 router.get('/session/active', authorize('student'), getActiveStudentSession);
+router.get('/session/latest', authorize('student'), getLatestStudentSession);
 router.post('/', authorize('student'), upload.single('image'), submitLog);
 router.get('/student', authorize('student'), getStudentLogs);
 

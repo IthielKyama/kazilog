@@ -1,18 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-brand-light: #818cf8;
+  --color-brand-light: #e0e7ff;
   --color-brand: #4f46e5;
-  --color-brand-dark: #3730a3;
+  --color-brand-dark: #4338ca;
   --color-background: #f8fafc;
-  --font-sans: "Inter", sans-serif;
+  --color-surface: #ffffff;
+  --color-line: #e2e8f0;
+  --color-text: #0f172a;
+  --color-text-soft: #64748b;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-heading: "Outfit", system-ui, sans-serif;
 }
 
 @layer base {
+  html {
+    color-scheme: light;
+  }
+
   body {
     background-color: var(--color-background);
-    color: var(--color-slate-800);
+    color: var(--color-text);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+
+  * {
+    box-sizing: border-box;
   }
 }

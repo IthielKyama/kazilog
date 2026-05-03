@@ -7,6 +7,8 @@
     "dev": "node scripts/dev.js",
     "dev:mobile": "npm --prefix mobile-app run dev",
     "bootstrap:admin": "npm --prefix backend run bootstrap:admin",
-    "check": "npm --prefix backend test && npm --prefix web-dashboard run build && npm --prefix mobile-app run typecheck"
+    "seed:demo": "npm --prefix backend run seed:demo",
+    "seed:test-data": "npm --prefix backend run seed:test-data",
+    "check": "npm --prefix backend test && npm --prefix web-dashboard run test -- --run && npm --prefix web-dashboard run build && npm --prefix mobile-app run typecheck"
   }
 }

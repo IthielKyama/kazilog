@@ -1,55 +1,26 @@
-import { useState, useEffect } from 'react';
-import { Building, MapPin, Save, UserPlus, Briefcase, ChevronDown, Check, LayoutDashboard } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Building, MapPin, Save, UserPlus, Briefcase, LayoutDashboard, Users, Building2, ClipboardList, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
+
 import { useAuthStore } from '../store/authStore';
 import { api, buildAuthConfig, extractApiError } from '../lib/api';
+import { CustomSelect, StyledDateInput } from '../components/CustomSelect';
 
-// --- Custom Select Component (No Browser Defaults) ---
-const CustomSelect = ({ options, value, onChange, placeholder }) => {
-  const [isOpen, setIsOpen] = useState(false);
+function SurfaceCard({ children, className = '' }) {
+  return <div className={`rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl shadow-xl shadow-slate-200/40 ${className}`}>{children}</div>;
+}
 
+function SummaryCard({ label, value, hint }) {
   return (
-    <div className="relative">
-      <div
-        className="w-full px-4 py-2 border border-slate-300 rounded-lg flex items-center justify-between cursor-pointer bg-white focus-within:ring-2 focus-within:ring-brand focus-within:border-brand transition-all"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <span className={value ? "text-slate-900" : "text-slate-400"}>
-          {value ? options.find(o => o.value === value)?.label : placeholder}
-        </span>
-        <ChevronDown size={18} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </div>
-
-      {isOpen && (
-        <>
-          {/* Invisible backdrop to close dropdown when clicking outside */}
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
-          <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-2">
-            {options.map((option) => (
-              <div
-                key={option.value}
-                className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors"
-                onClick={() => {
-                  onChange(option.value);
-                  setIsOpen(false);
-                }}
-              >
-                <span className={value === option.value ? "font-medium text-brand" : "text-slate-700"}>
-                  {option.label}
-                </span>
-                {value === option.value && <Check size={16} className="text-brand" />}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</div>
+      <div className="mt-3 text-3xl font-bold text-slate-900">{value}</div>
+      <p className="mt-2 text-sm leading-6 text-slate-500">{hint}</p>
     </div>
   );
-};
+}
 
-
-export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState('overview');
+export default function AdminDashboard({ activeTab = 'overview' }) {
   const [companies, setCompanies] = useState([]);
   const [users, setUsers] = useState([]);
   const [sessions, setSessions] = useState([]);
@@ -63,13 +34,13 @@ export default function AdminDashboard() {
       const [compRes, userRes, sessionRes] = await Promise.all([
         api.get('/admin/companies', config),
         api.get('/admin/users', config),
-        api.get('/admin/sessions', config)
+        api.get('/admin/sessions', config),
       ]);
       setCompanies(compRes.data?.data || []);
       setUsers(userRes.data?.data || []);
       setSessions(sessionRes.data?.data || []);
     } catch (error) {
-      toast.error('Failed to fetch dashboard data');
+      toast.error(extractApiError(error, 'Failed to fetch dashboard data'));
     } finally {
       setLoadingData(false);
     }
@@ -77,76 +48,105 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (token) {
-      fetchData();
+      void fetchData();
     }
   }, [token]);
 
+  const summary = useMemo(() => ({
+    companies: companies.length,
+    users: users.length,
+    students: users.filter((user) => user.role === 'student').length,
+    sessions: sessions.length,
+  }), [companies, users, sessions]);
+
   return (
-    <div className="py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in duration-500">
-      <div className="mb-8 flex justify-between items-end">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Admin Configuration</h1>
-          <p className="text-slate-500 mt-2">Manage companies, users, and attachment sessions.</p>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Admin Setup Workspace</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+          Configure companies, users, and student attachment sessions without leaving the admin setup area.
+        </p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-visible">
-        {/* Tabs */}
-        <div className="flex border-b border-slate-200 flex-wrap">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`flex items-center gap-2 px-6 py-4 font-medium text-sm transition-colors ${activeTab === 'overview' ? 'border-b-2 border-brand text-brand' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
-          >
-            <LayoutDashboard size={18} /> Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('company')}
-            className={`flex items-center gap-2 px-6 py-4 font-medium text-sm transition-colors ${activeTab === 'company' ? 'border-b-2 border-brand text-brand' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
-          >
-            <Building size={18} /> Register Company
-          </button>
-          <button
-            onClick={() => setActiveTab('user')}
-            className={`flex items-center gap-2 px-6 py-4 font-medium text-sm transition-colors ${activeTab === 'user' ? 'border-b-2 border-brand text-brand' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
-          >
-            <UserPlus size={18} /> Register User
-          </button>
-          <button
-            onClick={() => setActiveTab('session')}
-            className={`flex items-center gap-2 px-6 py-4 font-medium text-sm transition-colors ${activeTab === 'session' ? 'border-b-2 border-brand text-brand' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
-          >
-            <Briefcase size={18} /> Create Session
-          </button>
-        </div>
 
-        {/* Tab Content */}
-        <div className="p-8">
-          {activeTab === 'overview' && (
-            <div className="space-y-12">
-              <SessionList sessions={sessions} loading={loadingData} />
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                <UserList users={users} loading={loadingData} />
-                <CompanyList companies={companies} loading={loadingData} />
-              </div>
+
+      <SurfaceCard className="p-8">
+        {activeTab === 'overview' && (
+          <div className="space-y-10">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <SummaryCard label="Total Users" value={summary.users} hint="All registered accounts" />
+              <SummaryCard label="Students" value={summary.students} hint="Registered student accounts" />
+              <SummaryCard label="Companies" value={summary.companies} hint="Registered workplace locations" />
+              <SummaryCard label="Sessions" value={summary.sessions} hint="Configured attachment sessions" />
             </div>
-          )}
-          {activeTab === 'company' && <CompanyForm onSuccess={fetchData} />}
-          {activeTab === 'user' && <UserForm onSuccess={fetchData} />}
-          {activeTab === 'session' && <SessionForm companies={companies} users={users} onSuccess={fetchData} />}
-        </div>
+            <SetupGuidance />
+          </div>
+        )}
+        {activeTab === 'companies' && (
+          <div className="grid gap-8 xl:grid-cols-2 xl:items-start">
+            <CompanyForm onSuccess={fetchData} />
+            <CompanyList companies={companies} loading={loadingData} />
+          </div>
+        )}
+        {activeTab === 'users' && (
+          <div className="grid gap-8 xl:grid-cols-2 xl:items-start">
+            <UserForm onSuccess={fetchData} />
+            <UserList users={users} loading={loadingData} />
+          </div>
+        )}
+        {activeTab === 'sessions' && (
+          <div className="grid gap-8 xl:grid-cols-2 xl:items-start">
+            <SessionForm companies={companies} users={users} onSuccess={fetchData} />
+            <SessionList sessions={sessions} loading={loadingData} />
+          </div>
+        )}
+      </SurfaceCard>
+    </div>
+  );
+}
+
+function SetupGuidance() {
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
+      <div className="flex items-center gap-3">
+        <ClipboardList className="text-brand" size={20} />
+        <h3 className="text-lg font-semibold text-slate-900">Recommended setup order</h3>
+      </div>
+      <div className="mt-5 space-y-4">
+        {[
+          ['1. Register the company', 'Capture the workplace location and allowed radius before the student starts logging.'],
+          ['2. Create the user accounts', 'Add the student, supervisor, and assessor with the correct role and contact information.'],
+          ['3. Create the session', 'Link the student to one company, one supervisor, and one assessor for the attachment dates.'],
+        ].map(([title, description]) => (
+          <div key={title} className="rounded-2xl bg-white p-4 shadow-sm">
+            <div className="text-sm font-semibold text-slate-900">{title}</div>
+            <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-// --- Company Form ---
+function SectionHeading({ icon: Icon, title, description }) {
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-3">
+        <Icon className="text-brand" size={20} />
+        <h2 className="text-xl font-bold text-slate-900">{title}</h2>
+      </div>
+      {description ? <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p> : null}
+    </div>
+  );
+}
+
 function CompanyForm({ onSuccess }) {
-  const [formData, setFormData] = useState({ name: '', address: '', latitude: '', longitude: '', allowedRadiusMeters: 200 });
+  const [formData, setFormData] = useState({ name: '', address: '', latitude: '', longitude: '', allowedRadiusMeters: '200' });
   const [loading, setLoading] = useState(false);
   const token = useAuthStore(state => state.token);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setLoading(true);
 
     try {
@@ -155,15 +155,12 @@ function CompanyForm({ onSuccess }) {
         address: formData.address,
         latitude: Number(formData.latitude),
         longitude: Number(formData.longitude),
-        allowedRadiusMeters: Number(formData.allowedRadiusMeters)
+        allowedRadiusMeters: Number(formData.allowedRadiusMeters),
       };
 
       await api.post('/admin/companies', payload, buildAuthConfig(token));
-      toast.success(`${formData.name} has been registered successfully!`, {
-        icon: '🏢',
-        style: { borderRadius: '10px', background: '#333', color: '#fff' }
-      });
-      setFormData({ name: '', address: '', latitude: '', longitude: '', allowedRadiusMeters: 200 });
+      toast.success(`${formData.name} has been registered successfully!`);
+      setFormData({ name: '', address: '', latitude: '', longitude: '', allowedRadiusMeters: '200' });
       if (onSuccess) onSuccess();
     } catch (error) {
       toast.error(extractApiError(error, 'Failed to register company.'));
@@ -173,101 +170,105 @@ function CompanyForm({ onSuccess }) {
   };
 
   return (
-    <div className="max-w-2xl animate-in fade-in">
-      <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-        <Building className="text-brand" /> Add New Company
-      </h2>
+    <div className="max-w-3xl">
+      <SectionHeading
+        icon={Building}
+        title="Add New Company"
+        description="Save the workplace details and geofence radius students must be inside when submitting logs."
+      />
 
       <form className="space-y-6" onSubmit={handleSubmit}>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Company Name</label>
-          <input
-            type="text"
-            required
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="e.g. Safaricom PLC"
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
-          />
-        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <label htmlFor="company-name" className="mb-1 block text-sm font-medium text-slate-700">Company Name</label>
+            <input
+              id="company-name"
+              type="text"
+              required
+              value={formData.name}
+              onChange={(event) => setFormData({ ...formData, name: event.target.value })}
+              placeholder="e.g. Safaricom PLC"
+              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand"
+            />
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Physical Address</label>
-          <input
-            type="text"
-            required
-            value={formData.address}
-            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-            placeholder="e.g. Waiyaki Way, Nairobi"
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
-          />
-        </div>
+          <div className="md:col-span-2">
+            <label htmlFor="company-address" className="mb-1 block text-sm font-medium text-slate-700">Physical Address</label>
+            <input
+              id="company-address"
+              type="text"
+              required
+              value={formData.address}
+              onChange={(event) => setFormData({ ...formData, address: event.target.value })}
+              placeholder="e.g. Waiyaki Way, Nairobi"
+              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand"
+            />
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Latitude</label>
+            <label htmlFor="company-latitude" className="mb-1 block text-sm font-medium text-slate-700">Latitude</label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
                 <MapPin size={16} />
               </div>
               <input
+                id="company-latitude"
                 type="number"
                 step="any"
                 required
                 value={formData.latitude}
-                onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
+                onChange={(event) => setFormData({ ...formData, latitude: event.target.value })}
                 placeholder="-1.286389"
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+                className="w-full rounded-xl border border-slate-300 py-3 pl-10 pr-4 outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Longitude</label>
+            <label htmlFor="company-longitude" className="mb-1 block text-sm font-medium text-slate-700">Longitude</label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
                 <MapPin size={16} />
               </div>
               <input
+                id="company-longitude"
                 type="number"
                 step="any"
                 required
                 value={formData.longitude}
-                onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
+                onChange={(event) => setFormData({ ...formData, longitude: event.target.value })}
                 placeholder="36.817223"
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+                className="w-full rounded-xl border border-slate-300 py-3 pl-10 pr-4 outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand"
               />
             </div>
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Allowed GPS Radius (Meters)</label>
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          <label htmlFor="company-radius" className="mb-1 block text-sm font-medium text-slate-700">Allowed GPS Radius (Meters)</label>
           <input
+            id="company-radius"
             type="number"
             required
             value={formData.allowedRadiusMeters}
-            onChange={(e) => setFormData({ ...formData, allowedRadiusMeters: parseInt(e.target.value) })}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+            onChange={(event) => setFormData({ ...formData, allowedRadiusMeters: event.target.value })}
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand"
           />
-          <p className="text-xs text-slate-500 mt-2">
-            The maximum distance a student can be from the coordinates to successfully log their attendance.
+          <p className="mt-2 text-xs leading-5 text-slate-500">
+            The maximum distance a student can be from the saved company coordinates when submitting a log.
           </p>
         </div>
 
-        <div className="pt-4 border-t border-slate-100">
-          <button
-            disabled={loading}
-            className="flex items-center justify-center gap-2 w-full md:w-auto px-6 py-2.5 bg-brand text-white rounded-lg font-medium hover:bg-brand-dark transition-colors shadow-sm disabled:opacity-70"
-          >
-            <Save size={18} /> {loading ? 'Saving...' : 'Save Company'}
-          </button>
-        </div>
+        <button
+          disabled={loading}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand px-6 py-3 font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-70 md:w-auto"
+        >
+          <Save size={18} /> {loading ? 'Saving...' : 'Save Company'}
+        </button>
       </form>
     </div>
   );
 }
 
-// --- User Form ---
 function UserForm({ onSuccess }) {
   const [formData, setFormData] = useState({ name: '', email: '', role: 'student', registrationNumber: '' });
   const [loading, setLoading] = useState(false);
@@ -276,11 +277,11 @@ function UserForm({ onSuccess }) {
   const roleOptions = [
     { value: 'student', label: 'Student' },
     { value: 'supervisor', label: 'Industry Supervisor' },
-    { value: 'assessor', label: 'School Assessor' }
+    { value: 'assessor', label: 'School Assessor' },
   ];
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setLoading(true);
 
     try {
@@ -295,11 +296,7 @@ function UserForm({ onSuccess }) {
       }
 
       await api.post('/auth/register', payload, buildAuthConfig(token));
-      toast.success(`${formData.name} registered! A temporary password has been emailed to ${formData.email}.`, {
-        icon: '📧',
-        style: { borderRadius: '10px', background: '#333', color: '#fff' },
-        duration: 5000
-      });
+      toast.success(`${formData.name} registered successfully.`);
       setFormData({ name: '', email: '', role: 'student', registrationNumber: '' });
       if (onSuccess) onSuccess();
     } catch (error) {
@@ -310,45 +307,49 @@ function UserForm({ onSuccess }) {
   };
 
   return (
-    <div className="max-w-2xl animate-in fade-in">
-      <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-        <UserPlus className="text-brand" /> Register New User
-      </h2>
+    <div className="max-w-3xl">
+      <SectionHeading
+        icon={UserPlus}
+        title="Register New User"
+        description="Create student, supervisor, and assessor accounts with the role-specific information each person needs."
+      />
 
       <form className="space-y-6" onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid gap-6 md:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+            <label htmlFor="user-name" className="mb-1 block text-sm font-medium text-slate-700">Full Name</label>
             <input
+              id="user-name"
               type="text"
               required
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+              onChange={(event) => setFormData({ ...formData, name: event.target.value })}
+              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+            <label htmlFor="user-email" className="mb-1 block text-sm font-medium text-slate-700">Email Address</label>
             <input
+              id="user-email"
               type="email"
               required
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+              onChange={(event) => setFormData({ ...formData, email: event.target.value })}
+              placeholder="e.g. student@college.ac.ke"
+              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand"
             />
           </div>
         </div>
 
-        <div className="relative z-20">
-          <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
-          {/* Custom Select Component replaces native <select> */}
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          <label className="mb-1 block text-sm font-medium text-slate-700">Role</label>
           <CustomSelect
             options={roleOptions}
             value={formData.role}
-            onChange={(val) => setFormData({
+            onChange={(value) => setFormData({
               ...formData,
-              role: val,
-              registrationNumber: val === 'student' ? formData.registrationNumber : '',
+              role: value,
+              registrationNumber: value === 'student' ? formData.registrationNumber : '',
             })}
             placeholder="Select a role..."
           />
@@ -356,32 +357,30 @@ function UserForm({ onSuccess }) {
 
         {formData.role === 'student' && (
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Registration Number</label>
+            <label htmlFor="registration-number" className="mb-1 block text-sm font-medium text-slate-700">Registration Number</label>
             <input
+              id="registration-number"
               type="text"
               required
               value={formData.registrationNumber}
-              onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value })}
+              onChange={(event) => setFormData({ ...formData, registrationNumber: event.target.value })}
               placeholder="e.g. STU-2026-001"
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand"
             />
           </div>
         )}
 
-        <div className="pt-4 border-t border-slate-100 z-0 relative">
-          <button
-            disabled={loading}
-            className="flex items-center justify-center gap-2 w-full md:w-auto px-6 py-2.5 bg-brand text-white rounded-lg font-medium hover:bg-brand-dark transition-colors shadow-sm disabled:opacity-70"
-          >
-            <Save size={18} /> {loading ? 'Registering...' : 'Register User'}
-          </button>
-        </div>
+        <button
+          disabled={loading}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand px-6 py-3 font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-70 md:w-auto"
+        >
+          <Save size={18} /> {loading ? 'Registering...' : 'Register User'}
+        </button>
       </form>
     </div>
   );
 }
 
-// --- Session Form ---
 function SessionForm({ companies, users, onSuccess }) {
   const [formData, setFormData] = useState({
     student: '',
@@ -389,22 +388,24 @@ function SessionForm({ companies, users, onSuccess }) {
     supervisor: '',
     assessor: '',
     startDate: '',
-    endDate: ''
+    endDate: '',
   });
   const [loading, setLoading] = useState(false);
   const token = useAuthStore(state => state.token);
 
-  const studentOptions = users.filter(u => u.role === 'student').map(u => ({ value: u._id, label: u.name }));
-  const supervisorOptions = users.filter(u => u.role === 'supervisor').map(u => ({ value: u._id, label: u.name }));
-  const assessorOptions = users.filter(u => u.role === 'assessor').map(u => ({ value: u._id, label: u.name }));
-  const companyOptions = companies.map(c => ({ value: c._id, label: c.name }));
+  const studentOptions = users.filter((user) => user.role === 'student').map((user) => ({
+    value: user._id,
+    label: `${user.name}${user.registrationNumber ? ` (${user.registrationNumber})` : ''}`,
+  }));
+  const supervisorOptions = users.filter((user) => user.role === 'supervisor').map((user) => ({ value: user._id, label: user.name }));
+  const assessorOptions = users.filter((user) => user.role === 'assessor').map((user) => ({ value: user._id, label: user.name }));
+  const companyOptions = companies.map((company) => ({ value: company._id, label: company.name }));
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
-    // Validation: Ensure no empty IDs are sent
     if (!formData.student || !formData.company || !formData.supervisor || !formData.assessor) {
-      toast.error('Please select all user roles and a company.');
+      toast.error('Please select a student, company, supervisor, and assessor.');
       return;
     }
 
@@ -417,10 +418,7 @@ function SessionForm({ companies, users, onSuccess }) {
 
     try {
       await api.post('/admin/sessions', formData, buildAuthConfig(token));
-      toast.success('Session created successfully!', {
-        icon: '💼',
-        style: { borderRadius: '10px', background: '#333', color: '#fff' }
-      });
+      toast.success('Session created successfully!');
       setFormData({ student: '', company: '', supervisor: '', assessor: '', startDate: '', endDate: '' });
       if (onSuccess) onSuccess();
     } catch (error) {
@@ -431,104 +429,103 @@ function SessionForm({ companies, users, onSuccess }) {
   };
 
   return (
-    <div className="max-w-2xl animate-in fade-in">
-      <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-        <Briefcase className="text-brand" /> Create Attachment Session
-      </h2>
+    <div className="max-w-3xl">
+      <SectionHeading
+        icon={Briefcase}
+        title="Create Attachment Session"
+        description="Connect one student to the correct company, supervisor, and assessor for the attachment date range."
+      />
 
       <form className="space-y-6" onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-40">
+        <div className="grid gap-6 md:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Student</label>
+            <label htmlFor="session-student" className="mb-1 block text-sm font-medium text-slate-700">Student</label>
             <CustomSelect
+              inputId="session-student"
               options={studentOptions}
               value={formData.student}
-              onChange={(val) => setFormData({ ...formData, student: val })}
-              placeholder="Select a student..."
+              onChange={(value) => setFormData({ ...formData, student: value })}
+              placeholder="Student"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Company</label>
+            <label htmlFor="session-company" className="mb-1 block text-sm font-medium text-slate-700">Company</label>
             <CustomSelect
+              inputId="session-company"
               options={companyOptions}
               value={formData.company}
-              onChange={(val) => setFormData({ ...formData, company: val })}
-              placeholder="Select a company..."
+              onChange={(value) => setFormData({ ...formData, company: value })}
+              placeholder="Company"
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-30">
+        <div className="grid gap-6 md:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Industry Supervisor</label>
+            <label htmlFor="session-supervisor" className="mb-1 block text-sm font-medium text-slate-700">Industry Supervisor</label>
             <CustomSelect
+              inputId="session-supervisor"
               options={supervisorOptions}
               value={formData.supervisor}
-              onChange={(val) => setFormData({ ...formData, supervisor: val })}
-              placeholder="Select a supervisor..."
+              onChange={(value) => setFormData({ ...formData, supervisor: value })}
+              placeholder="Industry Supervisor"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">School Assessor</label>
+            <label htmlFor="session-assessor" className="mb-1 block text-sm font-medium text-slate-700">School Assessor</label>
             <CustomSelect
+              inputId="session-assessor"
               options={assessorOptions}
               value={formData.assessor}
-              onChange={(val) => setFormData({ ...formData, assessor: val })}
-              placeholder="Select an assessor..."
+              onChange={(value) => setFormData({ ...formData, assessor: value })}
+              placeholder="School Assessor"
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+        <div className="grid gap-6 md:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
-            <input
-              type="date"
+            <label htmlFor="session-start-date" className="mb-1 block text-sm font-medium text-slate-700">Start Date</label>
+            <StyledDateInput
+              id="session-start-date"
               required
               value={formData.startDate}
-              onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+              onChange={(event) => setFormData({ ...formData, startDate: event.target.value })}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
-            <input
-              type="date"
+            <label htmlFor="session-end-date" className="mb-1 block text-sm font-medium text-slate-700">End Date</label>
+            <StyledDateInput
+              id="session-end-date"
               required
               value={formData.endDate}
-              onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none transition-all"
+              onChange={(event) => setFormData({ ...formData, endDate: event.target.value })}
             />
           </div>
         </div>
 
-        <div className="pt-4 border-t border-slate-100 relative z-0">
-          <button
-            disabled={loading}
-            className="flex items-center justify-center gap-2 w-full md:w-auto px-6 py-2.5 bg-brand text-white rounded-lg font-medium hover:bg-brand-dark transition-colors shadow-sm disabled:opacity-70"
-          >
-            <Save size={18} /> {loading ? 'Creating...' : 'Create Session'}
-          </button>
-        </div>
+        <button
+          disabled={loading}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand px-6 py-3 font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-70 md:w-auto"
+        >
+          <Save size={18} /> {loading ? 'Creating...' : 'Create Session'}
+        </button>
       </form>
     </div>
   );
 }
 
-
-// --- List Components ---
 function CompanyList({ companies, loading }) {
-  if (loading) return <div className="text-slate-500">Loading companies...</div>;
-  if (!companies.length) return <div className="text-slate-500">No companies registered yet.</div>;
+  if (loading) return <div className="text-sm text-slate-500">Loading companies...</div>;
+  if (!companies.length) return <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-500">No companies registered yet.</div>;
 
   return (
-    <div className="animate-in fade-in">
-      <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-        Registered Companies
-      </h3>
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
-        <table className="w-full text-sm text-left text-slate-500">
-          <thead className="text-xs text-slate-700 uppercase bg-slate-50 border-b border-slate-200">
+    <div>
+      <SectionHeading icon={Building2} title="Registered Companies" description="Saved workplaces students can be attached to for logging." />
+      <div className="overflow-hidden rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl shadow-xl shadow-slate-200/40">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-500">
+            <thead className="border-b border-slate-200/60 bg-slate-50/80 text-xs font-bold uppercase tracking-wider text-slate-500">
             <tr>
               <th className="px-6 py-3">Name</th>
               <th className="px-6 py-3">Address</th>
@@ -536,32 +533,32 @@ function CompanyList({ companies, loading }) {
             </tr>
           </thead>
           <tbody>
-            {companies.map(c => (
-              <tr key={c._id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                <td className="px-6 py-4 font-medium text-slate-900">{c.name}</td>
-                <td className="px-6 py-4">{c.address}</td>
-                <td className="px-6 py-4">{c.allowedRadiusMeters}m</td>
+            {companies.map((company) => (
+              <tr key={company._id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                <td className="px-6 py-4 font-medium text-slate-900">{company.name}</td>
+                <td className="px-6 py-4">{company.address}</td>
+                <td className="px-6 py-4">{company.allowedRadiusMeters}m</td>
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
     </div>
   );
 }
 
 function UserList({ users, loading }) {
-  if (loading) return <div className="text-slate-500">Loading users...</div>;
-  if (!users.length) return <div className="text-slate-500">No users registered yet.</div>;
+  if (loading) return <div className="text-sm text-slate-500">Loading users...</div>;
+  if (!users.length) return <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-500">No users registered yet.</div>;
 
   return (
-    <div className="animate-in fade-in">
-      <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-        Registered Users
-      </h3>
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
-        <table className="w-full text-sm text-left text-slate-500">
-          <thead className="text-xs text-slate-700 uppercase bg-slate-50 border-b border-slate-200">
+    <div>
+      <SectionHeading icon={Users} title="Registered Users" description="Accounts available for session assignment and review workflows." />
+      <div className="overflow-hidden rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl shadow-xl shadow-slate-200/40">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-500">
+            <thead className="border-b border-slate-200/60 bg-slate-50/80 text-xs font-bold uppercase tracking-wider text-slate-500">
             <tr>
               <th className="px-6 py-3">Name</th>
               <th className="px-6 py-3">Role</th>
@@ -569,54 +566,61 @@ function UserList({ users, loading }) {
             </tr>
           </thead>
           <tbody>
-            {users.map(u => (
-              <tr key={u._id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                <td className="px-6 py-4 font-medium text-slate-900">{u.name}</td>
-                <td className="px-6 py-4 capitalize">{u.role}</td>
-                <td className="px-6 py-4">{u.email}</td>
+            {users.map((user) => (
+              <tr key={user._id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                <td className="px-6 py-4 font-medium text-slate-900">{user.name}</td>
+                <td className="px-6 py-4 capitalize">{user.role}</td>
+                <td className="px-6 py-4">{user.email}</td>
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
     </div>
   );
 }
 
 function SessionList({ sessions, loading }) {
-  if (loading) return <div className="text-slate-500">Loading sessions...</div>;
-  if (!sessions.length) return <div className="text-slate-500">No active sessions.</div>;
+  if (loading) return <div className="text-sm text-slate-500">Loading sessions...</div>;
+  if (!sessions.length) return <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-500">No attachment sessions configured yet.</div>;
 
   return (
-    <div className="animate-in fade-in">
-      <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-        Active Attachment Sessions
-      </h3>
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm overflow-x-auto">
-        <table className="w-full text-sm text-left text-slate-500 whitespace-nowrap">
-          <thead className="text-xs text-slate-700 uppercase bg-slate-50 border-b border-slate-200">
+    <div>
+      <SectionHeading icon={Briefcase} title="Configured Attachment Sessions" description="Student attachments currently defined in the system." />
+      <div className="overflow-hidden rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl shadow-xl shadow-slate-200/40">
+        <div className="overflow-x-auto">
+          <table className="w-full whitespace-nowrap text-left text-sm text-slate-500">
+            <thead className="border-b border-slate-200/60 bg-slate-50/80 text-xs font-bold uppercase tracking-wider text-slate-500">
             <tr>
               <th className="px-6 py-3">Student Name</th>
               <th className="px-6 py-3">Company</th>
               <th className="px-6 py-3">Industry Supervisor</th>
               <th className="px-6 py-3">School Assessor</th>
               <th className="px-6 py-3">Date Range</th>
+              <th className="px-6 py-3">Status</th>
             </tr>
           </thead>
           <tbody>
-            {sessions.map(s => (
-              <tr key={s._id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                <td className="px-6 py-4 font-medium text-slate-900">{s.student?.name || 'Unknown'}</td>
-                <td className="px-6 py-4 font-medium text-slate-900">{s.company?.name || 'Unknown'}</td>
-                <td className="px-6 py-4">{s.supervisor?.name || 'Unknown'}</td>
-                <td className="px-6 py-4">{s.assessor?.name || 'Unknown'}</td>
+            {sessions.map((session) => (
+              <tr key={session._id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                <td className="px-6 py-4 font-medium text-slate-900">{session.student?.name || 'Unknown'}</td>
+                <td className="px-6 py-4 font-medium text-slate-900">{session.company?.name || 'Unknown'}</td>
+                <td className="px-6 py-4">{session.supervisor?.name || 'Unknown'}</td>
+                <td className="px-6 py-4">{session.assessor?.name || 'Unknown'}</td>
                 <td className="px-6 py-4">
-                  {new Date(s.startDate).toLocaleDateString()} - {new Date(s.endDate).toLocaleDateString()}
+                  {new Date(session.startDate).toLocaleDateString()} - {new Date(session.endDate).toLocaleDateString()}
+                </td>
+                <td className="px-6 py-4">
+                  <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${session.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}>
+                    {session.isActive ? 'Active' : 'Completed'}
+                  </span>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

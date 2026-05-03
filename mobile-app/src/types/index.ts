@@ -38,6 +38,7 @@ export type AttachmentSession = {
 
 export type LogEntry = {
   _id: string;
+  session?: string;
   date: string;
   tasksDone: string;
   skillsLearned: string;
@@ -66,4 +67,10 @@ export type OfflineLogPayload = {
   retryCount: number;
   lastError?: string;
   nextRetryAt?: number;
+  lastAttemptAt?: string;
 };
+
+export type LogSubmissionPayload = Pick<
+  OfflineLogPayload,
+  'idempotencyKey' | 'sessionId' | 'tasksDone' | 'skillsLearned' | 'latitude' | 'longitude' | 'imageUri'
+>;

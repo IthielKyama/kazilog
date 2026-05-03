@@ -92,4 +92,12 @@ export const offlineLogStorage = {
     await this.setLogs(nextLogs);
     return nextLogs;
   },
+  async updateLog(idempotencyKey: string, updates: Partial<OfflineLogPayload>) {
+    const logs = await this.getLogs();
+    const nextLogs = logs.map((item) =>
+      item.idempotencyKey === idempotencyKey ? { ...item, ...updates } : item,
+    );
+    await this.setLogs(nextLogs);
+    return nextLogs;
+  },
 };

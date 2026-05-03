@@ -35,9 +35,33 @@ class SyncManager {
     }
   }
 
+  async retryLog(idempotencyKey: string): Promise<void> {
+    const networkState = await NetInfo.fetch();
+    if (!networkState.isConnected) {
+      throw new Error('Internet connection is required to retry this log.');
+    }
+
+    const logs = await offlineLogStorage.getLogs();
+    const log = logs.find((item) => item.idempotencyKey === idempotencyKey);
+
+    if (!log) {
+      throw new Error('The selected offline log could not be found.');
+    }
+
+    await offlineLogStorage.updateLog(idempotencyKey, {
+      syncState: 'queued',
+      nextRetryAt: undefined,
+      lastError: undefined,
+    });
+    await this.syncSingleLog({ ...log, syncState: 'queued', nextRetryAt: undefined, lastError: undefined });
+  }
+
   private async syncSingleLog(log: OfflineLogPayload) {
     // 1. Mark as syncing
-    await this.updateLogState(log.idempotencyKey, { syncState: 'syncing' });
+    await this.updateLogState(log.idempotencyKey, {
+      syncState: 'syncing',
+      lastAttemptAt: new Date().toISOString(),
+    });
 
     try {
       // 2. Attempt API call
@@ -55,7 +79,8 @@ class SyncManager {
         if (nextRetryCount > MAX_RETRIES) {
           await this.updateLogState(log.idempotencyKey, { 
             syncState: 'failed', 
-            lastError: 'Max retries exceeded. Please manually re-submit.' 
+            retryCount: nextRetryCount,
+            lastError: 'Max retries exceeded. Please manually retry.' 
           });
         } else {
           // Exponential backoff: 2s, 4s, 8s, 16s...
@@ -78,11 +103,7 @@ class SyncManager {
   }
 
   private async updateLogState(idempotencyKey: string, updates: Partial<OfflineLogPayload>) {
-    const logs = await offlineLogStorage.getLogs();
-    const updatedLogs = logs.map(log => 
-      log.idempotencyKey === idempotencyKey ? { ...log, ...updates } : log
-    );
-    await offlineLogStorage.setLogs(updatedLogs);
+    await offlineLogStorage.updateLog(idempotencyKey, updates);
   }
 }
 

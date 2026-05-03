@@ -9,7 +9,9 @@
     "dev": "nodemon src/server.js",
     "bootstrap:admin": "node create-admin.js",
     "create-admin": "npm run bootstrap:admin",
-    "test": "cross-env NODE_ENV=test jest --detectOpenHandles --forceExit"
+    "seed:demo": "node seed-demo.js",
+    "seed:test-data": "node seed-test-data.js",
+    "test": "cross-env NODE_ENV=test MONGOMS_MD5_CHECK=false jest --detectOpenHandles --forceExit"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

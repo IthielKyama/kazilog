@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 import { API_BASE_URL } from '../config/env';
-import { AttachmentSession, AuthResponse, LogEntry, OfflineLogPayload } from '../types';
+import { AttachmentSession, AuthResponse, LogEntry, LogSubmissionPayload } from '../types';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -33,6 +33,20 @@ export const authApi = {
     const { data } = await api.post<AuthResponse>('/auth/login', { email, password });
     return data;
   },
+  async forgotPassword(email: string, resetUrlBase?: string) {
+    const { data } = await api.post<{ success: boolean; data: string }>('/auth/forgotpassword', {
+      email,
+      client: 'mobile',
+      resetUrlBase,
+    });
+    return data;
+  },
+  async resetPassword(resetToken: string, password: string) {
+    const { data } = await api.put<AuthResponse & { success: boolean }>(`/auth/resetpassword/${resetToken}`, {
+      password,
+    });
+    return data;
+  },
   async changePassword(currentPassword: string, newPassword: string) {
     const { data } = await api.put<AuthResponse>('/auth/change-password', {
       currentPassword,
@@ -47,11 +61,16 @@ export const logbookApi = {
     const { data } = await api.get<{ success: boolean; data: AttachmentSession }>('/logs/session/active');
     return data.data;
   },
-  async getStudentLogs() {
-    const { data } = await api.get<{ success: boolean; count: number; data: LogEntry[] }>('/logs/student');
+  async getLatestSession() {
+    const { data } = await api.get<{ success: boolean; data: AttachmentSession }>('/logs/session/latest');
     return data.data;
   },
-  async submitLog(payload: Omit<OfflineLogPayload, 'localId' | 'capturedAt'>) {
+  async getStudentLogs(sessionId?: string) {
+    const params = sessionId ? { sessionId } : undefined;
+    const { data } = await api.get<{ success: boolean; count: number; data: LogEntry[] }>('/logs/student', { params });
+    return data.data;
+  },
+  async submitLog(payload: LogSubmissionPayload) {
     if (payload.imageUri) {
       const formData = new FormData();
       formData.append('sessionId', payload.sessionId);

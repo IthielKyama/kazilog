@@ -14,10 +14,11 @@ exports.getAssignedSessions = asyncHandler(async (req, res) => {
   const sessionsWithStats = await Promise.all(sessions.map(async (session) => {
     const totalLogs = await LogbookEntry.countDocuments({ session: session._id });
     const approvedLogs = await LogbookEntry.countDocuments({ session: session._id, supervisorStatus: 'Approved' });
+    const rejectedLogs = await LogbookEntry.countDocuments({ session: session._id, supervisorStatus: 'Rejected' });
     
     return {
       ...session.toObject(),
-      stats: { totalLogs, approvedLogs }
+      stats: { totalLogs, approvedLogs, rejectedLogs }
     };
   }));
 

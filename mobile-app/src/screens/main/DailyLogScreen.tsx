@@ -3,8 +3,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View, ActivityIndicator, Image, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { differenceInWeeks, parseISO } from 'date-fns';
-import { Camera, MapPin, X } from 'lucide-react-native';
+import { differenceInWeeks, format, parseISO } from 'date-fns';
+import { Camera, MapPin, X, Send, Wifi, WifiOff } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import * as Crypto from 'expo-crypto';
 
@@ -13,6 +13,9 @@ import { extractApiError, logbookApi } from '../../services/api';
 import { getResilientCoordinates } from '../../utils/location';
 import { syncManager } from '../../utils/SyncManager';
 import { FloatingLabelInput } from '../../components/FloatingLabelInput';
+import { useTheme } from '../../theme/ThemeContext';
+
+const DEV_GPS_FALLBACK_ENABLED = __DEV__;
 
 export function DailyLogScreen({ navigation }: any) {
   const {
@@ -30,6 +33,7 @@ export function DailyLogScreen({ navigation }: any) {
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const { colors } = useTheme();
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -142,14 +146,14 @@ export function DailyLogScreen({ navigation }: any) {
 
     let { coords, error } = await getResilientCoordinates();
 
-    // Fallback to company location if GPS capture fails (DEVELOPMENT ONLY - to prevent student bypass in production)
-    if (!coords && __DEV__ && activeSession?.company?.location?.coordinates) {
+    // Development convenience only: production submissions still require live GPS.
+    if (!coords && DEV_GPS_FALLBACK_ENABLED && activeSession?.company?.location?.coordinates) {
       coords = {
         latitude: activeSession.company.location.coordinates[1],
         longitude: activeSession.company.location.coordinates[0],
       };
-    } else if (!coords && __DEV__) {
-      // Ultimate fallback if no session data available (DEVELOPMENT ONLY)
+    } else if (!coords && DEV_GPS_FALLBACK_ENABLED) {
+      // Final dev fallback so emulator testing is still possible without GPS hardware.
       coords = { latitude: -1.2921, longitude: 36.8219 };
     }
 
@@ -204,60 +208,117 @@ export function DailyLogScreen({ navigation }: any) {
     }
   };
 
+  const isReady = !!(tasksDone && skillsLearned && activeSession);
+
   return (
     <ScrollView
-      className="flex-1 bg-surface"
-      contentContainerStyle={{ padding: 16, gap: 16 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#0f766e" />}
+      style={{ flex: 1, backgroundColor: colors.background }}
+      contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 32 }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.brand} />}
     >
+      {/* Progress Bar */}
       {progress && (
-        <View className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-          <View className="flex-row justify-between items-center mb-2">
-            <Text className="text-sm font-semibold text-slate-700">Attachment Progress</Text>
-            <Text className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">
-              Week {progress.currentWeek} of {progress.totalWeeks}
-            </Text>
+        <View
+          style={{
+            borderRadius: 20,
+            padding: 16,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.surface,
+            shadowColor: '#0f172a',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.04,
+            shadowRadius: 8,
+            elevation: 2,
+          }}
+        >
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textMuted }}>Attachment Progress</Text>
+            <View style={{ backgroundColor: colors.brandSoft, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: colors.brand }}>
+                Week {progress.currentWeek} of {progress.totalWeeks}
+              </Text>
+            </View>
           </View>
-          <View className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-            <View 
-              className="h-full bg-emerald-500 rounded-full" 
-              style={{ width: `${progress.percentage}%` }} 
+          <View style={{ height: 8, width: '100%', borderRadius: 99, backgroundColor: colors.surfaceMuted, overflow: 'hidden' }}>
+            <View
+              style={{
+                height: '100%',
+                borderRadius: 99,
+                backgroundColor: colors.brand,
+                width: `${progress.percentage}%`,
+              }}
             />
           </View>
+          <Text style={{ marginTop: 8, fontSize: 12, color: colors.textSoft }}>
+            {progress.percentage}% complete
+          </Text>
         </View>
       )}
 
+      {/* Offline Queue Banner */}
       {pendingLogs.length > 0 && (() => {
         const hasFailed = pendingLogs.some(log => log.syncState === 'failed');
         const failedMessage = pendingLogs.find(log => log.syncState === 'failed')?.lastError;
         
         return (
-          <View className={`rounded-2xl p-4 border ${hasFailed ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
-            <View className="flex-row justify-between items-center mb-2">
-              <Text className={`${hasFailed ? 'text-red-800' : 'text-amber-800'} font-semibold text-sm`}>
-                Offline Queue ({pendingLogs.length})
-              </Text>
-              <Text 
-                className="text-brand font-bold text-sm" 
-                onPress={() => syncNow().catch((error) => setMessage(extractApiError(error)))}
-              >
-                {syncState.syncing ? 'Syncing...' : (hasFailed ? 'Retry Failed' : 'Sync Now')}
-              </Text>
+          <View
+            style={{
+              borderRadius: 16,
+              padding: 16,
+              borderWidth: 1,
+              borderColor: hasFailed ? colors.danger : colors.warning,
+              backgroundColor: hasFailed ? colors.dangerSoft : colors.warningSoft,
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <WifiOff size={16} color={hasFailed ? colors.danger : colors.warning} />
+                <Text style={{ fontWeight: '700', fontSize: 13, color: hasFailed ? colors.danger : colors.warning }}>
+                  Offline Queue ({pendingLogs.length})
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => syncNow().catch((error) => setMessage(extractApiError(error)))}>
+                <Text style={{ fontWeight: '700', fontSize: 13, color: colors.brand }}>
+                  {syncState.syncing ? 'Syncing...' : (hasFailed ? 'Retry Failed' : 'Sync Now')}
+                </Text>
+              </TouchableOpacity>
             </View>
-            <Text className={`text-xs ${hasFailed ? 'text-red-700' : 'text-amber-700'}`}>
+            <Text style={{ fontSize: 12, color: hasFailed ? colors.danger : colors.warning }}>
               {hasFailed ? `Error: ${failedMessage}` : (syncState.lastMessage || 'Waiting for internet connection to sync logs.')}
             </Text>
           </View>
         );
       })()}
 
-      <View className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 mb-6">
-        <View className="mb-6">
-          <Text className="text-xl font-bold text-slate-800">Today's Log</Text>
+      {/* Today's Log Form */}
+      <View
+        style={{
+          borderRadius: 28,
+          padding: 24,
+          borderWidth: 1,
+          borderColor: colors.border,
+          backgroundColor: colors.surface,
+          shadowColor: '#0f172a',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.06,
+          shadowRadius: 16,
+          elevation: 3,
+        }}
+      >
+        <View style={{ marginBottom: 20 }}>
+          <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text, letterSpacing: -0.3 }}>
+            Today's Log
+          </Text>
+          <Text style={{ marginTop: 6, fontSize: 14, color: colors.textSoft }}>
+            {format(new Date(), 'EEEE, dd MMMM yyyy')}
+          </Text>
           {!activeSession && (
-             <Text className="text-sm text-amber-600 mt-2">
-               Waiting for active session to enable submissions.
-             </Text>
+            <View style={{ marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: colors.warningSoft }}>
+              <Text style={{ fontSize: 13, color: colors.warning }}>
+                Waiting for active session to enable submissions.
+              </Text>
+            </View>
           )}
         </View>
 
@@ -277,48 +338,93 @@ export function DailyLogScreen({ navigation }: any) {
           multiline
         />
 
-        <View className="flex-row items-center mb-6 mt-2">
+        {/* Image Picker */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20, marginTop: 4 }}>
           {imageUri ? (
-            <View className="relative h-20 w-20 rounded-xl overflow-hidden border border-slate-200">
-              <Image source={{ uri: imageUri }} className="h-full w-full" />
-              <TouchableOpacity 
-                className="absolute top-1 right-1 bg-black/50 rounded-full p-1"
+            <View
+              style={{
+                height: 80,
+                width: 80,
+                borderRadius: 16,
+                overflow: 'hidden',
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <Image source={{ uri: imageUri }} style={{ height: '100%', width: '100%' }} />
+              <TouchableOpacity
+                style={{
+                  position: 'absolute',
+                  top: 4,
+                  right: 4,
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  borderRadius: 99,
+                  padding: 4,
+                }}
                 onPress={() => setImageUri(null)}
               >
                 <X size={12} color="white" />
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={pickImage}
-              className="flex-row items-center bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl"
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                borderRadius: 14,
+                backgroundColor: colors.surfaceMuted,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
             >
-              <Camera size={20} color="#64748b" />
-              <Text className="ml-2 text-slate-600 font-medium">Attach Photo</Text>
+              <Camera size={20} color={colors.textSoft} />
+              <Text style={{ marginLeft: 8, fontWeight: '600', color: colors.textMuted }}>Attach Photo</Text>
             </TouchableOpacity>
           )}
         </View>
 
+        {/* Submit Button */}
         <TouchableOpacity
           onPress={handleSubmit}
-          disabled={submitting || !tasksDone || !skillsLearned || !activeSession}
-          className={`w-full flex-row justify-center items-center py-4 rounded-2xl ${
-            tasksDone && skillsLearned && activeSession ? 'bg-emerald-600 shadow-md shadow-emerald-200' : 'bg-slate-300'
-          }`}
+          disabled={submitting || !isReady}
+          activeOpacity={0.8}
+          style={{
+            width: '100%',
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingVertical: 16,
+            borderRadius: 18,
+            backgroundColor: isReady ? colors.brand : colors.borderStrong,
+            shadowColor: isReady ? colors.brand : 'transparent',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: isReady ? 0.3 : 0,
+            shadowRadius: 12,
+            elevation: isReady ? 4 : 0,
+          }}
         >
           {submitting ? (
             <>
               <ActivityIndicator color="white" />
-              <Text className="text-white font-semibold text-lg ml-3">Getting GPS...</Text>
+              <Text style={{ color: 'white', fontWeight: '700', fontSize: 16, marginLeft: 12 }}>Getting GPS...</Text>
             </>
           ) : (
             <>
               <MapPin size={20} color="white" />
-              <Text className="text-white font-semibold text-lg ml-2">Capture & Submit</Text>
+              <Text style={{ color: 'white', fontWeight: '700', fontSize: 16, marginLeft: 8 }}>Capture & Submit</Text>
             </>
           )}
         </TouchableOpacity>
       </View>
+
+      {message ? (
+        <View style={{ padding: 12, borderRadius: 12, backgroundColor: colors.dangerSoft }}>
+          <Text style={{ fontSize: 13, color: colors.danger }}>{message}</Text>
+        </View>
+      ) : null}
     </ScrollView>
   );
 }
