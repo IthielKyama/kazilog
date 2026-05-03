@@ -26,16 +26,15 @@ const GradeSelect = ({ value, onChange, disabled }) => {
           ? 'bg-amber-50 border-amber-200 text-amber-700'
           : 'bg-emerald-50 border-emerald-200 text-emerald-700 font-bold'
       }`}
-      menuClassName="right-0"
     />
   );
 };
 
 function SummaryCard({ label, value, hint }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</div>
-      <div className="mt-3 text-3xl font-bold text-slate-900">{value}</div>
+    <div className="rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl p-5 shadow-xl shadow-slate-200/40 transition-all hover:-translate-y-0.5">
+      <div className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</div>
+      <div className="mt-3 text-4xl font-extrabold text-slate-900 tracking-tight">{value}</div>
       <p className="mt-2 text-sm leading-6 text-slate-500">{hint}</p>
     </div>
   );
@@ -91,12 +90,12 @@ const StudentLogsModal = ({ session, onClose, token }) => {
   if (!session) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border border-slate-200/50 bg-white shadow-2xl shadow-slate-900/40 animate-in slide-in-from-bottom-4 duration-500">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200/60 px-8 py-6 bg-slate-50/50">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">Logs for {session.student?.name}</h2>
-            <p className="mt-1 text-sm text-slate-500">{session.company?.name}</p>
+            <h2 className="text-2xl font-bold text-slate-900">Logs for {session.student?.name}</h2>
+            <p className="mt-1 text-sm font-medium text-slate-500">{session.company?.name}</p>
           </div>
           <button onClick={onClose} className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">
             <X size={20} />
@@ -156,13 +155,13 @@ const StudentLogsModal = ({ session, onClose, token }) => {
                         </div>
 
                         <div className="grid gap-4 md:grid-cols-2">
-                          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                            <h4 className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Tasks Done</h4>
-                            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">{log.tasksDone}</p>
+                          <div className="rounded-2xl border border-slate-200/60 bg-slate-50/50 p-5">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Tasks Done</h4>
+                            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{log.tasksDone}</p>
                           </div>
-                          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                            <h4 className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Skills Learned</h4>
-                            <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">{log.skillsLearned}</p>
+                          <div className="rounded-2xl border border-slate-200/60 bg-slate-50/50 p-5">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Skills Learned</h4>
+                            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{log.skillsLearned}</p>
                           </div>
                         </div>
 
@@ -279,9 +278,9 @@ export default function AssessorDashboard() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="relative min-w-56">
+        <div className="rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl p-4 shadow-xl shadow-slate-200/40">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <div className="relative w-full md:flex-1">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
@@ -291,10 +290,10 @@ export default function AssessorDashboard() {
                 className="w-full rounded-lg border border-slate-300 py-2.5 pl-9 pr-4 text-sm text-slate-700 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand"
               />
             </div>
-            <div className="min-w-40">
+            <div className="w-full md:w-40">
               <CustomSelect options={statusOptions} value={statusFilter} onChange={setStatusFilter} placeholder="Status" />
             </div>
-            <div className="min-w-52">
+            <div className="w-full md:w-52">
               <CustomSelect options={companyOptions} value={companyFilter} onChange={setCompanyFilter} placeholder="Company" />
             </div>
           </div>
@@ -308,7 +307,7 @@ export default function AssessorDashboard() {
         <SummaryCard label="Grades Pending" value={summary.gradingPending} hint="Sessions still waiting for a final grade." />
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl shadow-xl shadow-slate-200/40 overflow-hidden">
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Assigned Students</h2>
@@ -321,17 +320,17 @@ export default function AssessorDashboard() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50">
+          <table className="min-w-full divide-y divide-slate-200/60">
+            <thead className="bg-slate-50/80">
               <tr>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Student</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Company</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Progress</th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Session Status</th>
-                <th scope="col" className="px-6 py-4 text-right text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Final Grade</th>
+                <th scope="col" className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Student</th>
+                <th scope="col" className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Company</th>
+                <th scope="col" className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Progress</th>
+                <th scope="col" className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Session Status</th>
+                <th scope="col" className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-slate-500">Final Grade</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 bg-white">
+            <tbody className="divide-y divide-slate-200/60 bg-transparent">
               {loading ? (
                 <tr>
                   <td colSpan="5" className="px-6 py-12 text-center text-slate-500">Loading student data...</td>
@@ -376,8 +375,8 @@ export default function AssessorDashboard() {
                             style={{ width: `${Math.min(100, (session.stats.approvedLogs / (session.stats.totalLogs || 1)) * 100)}%` }}
                           />
                         </div>
-                        <div className="text-xs font-medium text-slate-500">
-                          {session.stats.approvedLogs} approved / {session.stats.totalLogs} total logs
+                        <div className="text-xs font-medium text-slate-500 mt-2">
+                          {session.stats.approvedLogs} approved • {session.stats.rejectedLogs} rejected / {session.stats.totalLogs} total
                         </div>
                       </div>
                     </td>

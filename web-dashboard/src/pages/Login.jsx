@@ -48,21 +48,22 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#f8fafc] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-brand-light/40 via-slate-50 to-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md animate-in slide-in-from-bottom-4 duration-500">
-        <div className="flex justify-center items-center gap-2 mb-6">
-          <div className="p-3 bg-brand rounded-xl shadow-sm text-white">
-            <MapPin size={32} />
+        <div className="flex justify-center items-center gap-3 mb-8">
+          <div className="flex h-12 w-12 items-center justify-center bg-gradient-to-br from-brand to-brand-dark rounded-2xl shadow-lg shadow-brand/20 text-white">
+            <MapPin size={24} />
           </div>
           <span className="font-extrabold text-3xl tracking-tight text-slate-900">KaziLog</span>
         </div>
-        <h2 className="mt-2 text-center text-2xl font-bold text-slate-900">
+        <h2 className="mt-2 text-center text-3xl font-bold text-slate-900">
           Sign in to your account
         </h2>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md animate-in fade-in duration-700">
-        <div className="bg-white py-8 px-4 shadow-sm border border-slate-200 sm:rounded-xl sm:px-10">
+      <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-md animate-in fade-in duration-700">
+        <div className="bg-white/80 backdrop-blur-xl py-10 px-4 shadow-2xl shadow-slate-200/50 border border-slate-200/60 sm:rounded-[2rem] sm:px-10 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand via-brand-light to-brand opacity-80" />
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label className="block text-sm font-medium text-slate-700">
@@ -104,7 +105,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-brand hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand transition-colors disabled:opacity-70"
+                className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-lg shadow-brand/20 text-sm font-bold text-white bg-brand hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand transition-all hover:-translate-y-0.5 disabled:opacity-70 disabled:hover:translate-y-0"
               >
                 {loading ? 'Signing in...' : <><LogIn size={18} /> Sign in</>}
               </button>
