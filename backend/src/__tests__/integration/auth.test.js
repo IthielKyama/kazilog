@@ -18,6 +18,7 @@ beforeAll(async () => {
 afterEach(async () => {
   sendEmail.mockClear();
   delete process.env.WEB_DASHBOARD_URL;
+  delete process.env.MOBILE_APP_RESET_URL;
   const collections = mongoose.connection.collections;
   for (const key in collections) {
     await collections[key].deleteMany({});
@@ -301,26 +302,51 @@ describe('GET /api/auth/me', () => {
 // POST /api/auth/forgotpassword
 // ═══════════════════════════════════════════════════════════
 describe('POST /api/auth/forgotpassword', () => {
-  test('uses WEB_DASHBOARD_URL when building the reset link', async () => {
+  test('uses WEB_DASHBOARD_URL when building the reset link for supervisor accounts', async () => {
     process.env.WEB_DASHBOARD_URL = 'http://localhost:5173/';
 
     await User.create({
-      name: 'Forgot Password User',
-      email: 'forgot@test.com',
+      name: 'Forgot Password Supervisor',
+      email: 'supervisor-forgot@test.com',
       password: 'Password1!',
-      registrationNumber: 'STU-250',
+      role: 'supervisor',
     });
 
     const res = await request(app)
       .post('/api/auth/forgotpassword')
-      .send({ email: 'forgot@test.com' });
+      .send({ email: 'supervisor-forgot@test.com' });
 
     expect(res.statusCode).toBe(200);
     expect(sendEmail).toHaveBeenCalledTimes(1);
     expect(sendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
-        email: 'forgot@test.com',
+        email: 'supervisor-forgot@test.com',
         message: expect.stringContaining('http://localhost:5173/reset-password/'),
+      })
+    );
+  });
+
+  test('uses MOBILE_APP_RESET_URL when building the reset link for student accounts', async () => {
+    process.env.MOBILE_APP_RESET_URL = 'kazilog://reset-password/';
+
+    await User.create({
+      name: 'Forgot Password Student',
+      email: 'student-forgot@test.com',
+      password: 'Password1!',
+      registrationNumber: 'STU-250',
+      role: 'student',
+    });
+
+    const res = await request(app)
+      .post('/api/auth/forgotpassword')
+      .send({ email: 'student-forgot@test.com' });
+
+    expect(res.statusCode).toBe(200);
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    expect(sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'student-forgot@test.com',
+        message: expect.stringContaining('kazilog://reset-password/'),
       })
     );
   });

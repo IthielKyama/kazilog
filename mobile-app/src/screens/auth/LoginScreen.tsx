@@ -1,6 +1,6 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { MapPin } from 'lucide-react-native';
 
 import { PasswordInput } from '../../components/PasswordInput';
@@ -12,7 +12,7 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
-export function LoginScreen({}: Props) {
+export function LoginScreen({ navigation }: Props) {
   const { login } = useAuth();
   const { colors } = useTheme();
   const [email, setEmail] = useState('');
@@ -122,6 +122,12 @@ export function LoginScreen({}: Props) {
               onChangeText={setPassword}
               placeholder="Enter your password"
             />
+
+            <Pressable onPress={() => navigation.navigate('ForgotPassword')} hitSlop={8}>
+              <Text style={{ alignSelf: 'flex-end', fontSize: 13, fontWeight: '600', color: colors.brand }}>
+                Forgot password?
+              </Text>
+            </Pressable>
           </View>
 
           {error ? (

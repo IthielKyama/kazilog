@@ -121,9 +121,11 @@ ADMIN_NAME=System Admin
 ADMIN_EMAIL=admin@kazilog.com
 ADMIN_PASSWORD=Admin@12345
 WEB_DASHBOARD_URL=http://localhost:5173
+MOBILE_APP_RESET_URL=http://localhost:8081/reset-password
 ```
 
-`WEB_DASHBOARD_URL` is used for password reset links sent by the backend.
+`WEB_DASHBOARD_URL` is used for assessor, supervisor, and admin password reset links.
+`MOBILE_APP_RESET_URL` is used for student password reset links in local development. With the default value above, reset emails point to `http://localhost:8081/reset-password/<token>`.
 
 ### Web Dashboard
 
@@ -145,6 +147,8 @@ Override `EXPO_PUBLIC_API_BASE_URL` if you are using:
 
 - iOS simulator or Expo web: `http://localhost:5000/api`
 - a physical device on the same network: `http://YOUR_LOCAL_IP:5000/api`
+
+The mobile app registers the custom URL scheme `kazilog://` for student password reset links.
 
 ## Suggested Local Demo Flow
 
@@ -227,7 +231,8 @@ npm run seed:demo
 3. From within the company geofence, submit a new daily log and confirm it lands in history.
 4. Temporarily disable internet, submit another log, and confirm it appears in the offline queue.
 5. Re-enable internet and confirm the queue syncs automatically.
-6. If using an emulator without reliable GPS, development-only fallback coordinates are still allowed in `__DEV__` builds.
+6. Sign out, tap `Forgot password?`, request a reset link, and confirm the email link opens the `Reset Password` screen in the app.
+7. If using an emulator without reliable GPS, development-only fallback coordinates are still allowed in `__DEV__` builds.
 
 ### 4. Test the supervisor dashboard
 

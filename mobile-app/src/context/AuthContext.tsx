@@ -2,6 +2,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { AppState } from 'react-native';
 
+import { MOBILE_RESET_URL_BASE } from '../config/env';
 import { authApi, extractApiError, logbookApi, setAuthToken } from '../services/api';
 import { authStorage, offlineLogStorage } from '../services/storage';
 import { syncManager } from '../utils/SyncManager';
@@ -17,6 +18,8 @@ type AuthContextValue = {
   pendingLogs: OfflineLogPayload[];
   syncState: { syncing: boolean; lastMessage: string | null };
   login: (email: string, password: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (token: string, newPassword: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshSessionData: () => Promise<void>;
   queueOfflineLog: (payload: OfflineLogPayload) => Promise<void>;
@@ -151,6 +154,33 @@ export function AuthProvider({ children }: PropsWithChildren) {
     [applyAuth, refreshPendingLogs],
   );
 
+  const forgotPassword = useCallback(async (email: string) => {
+    await authApi.forgotPassword(email.trim(), MOBILE_RESET_URL_BASE);
+  }, []);
+
+  const logout = useCallback(async () => {
+    setAuthToken(null);
+    setUser(null);
+    setToken(null);
+    setActiveSession(null);
+    setLatestSession(null);
+    setLogs([]);
+    await authStorage.clearToken();
+    await authStorage.clearUser();
+  }, []);
+
+  const resetPassword = useCallback(
+    async (resetToken: string, newPassword: string) => {
+      const data = await authApi.resetPassword(resetToken, newPassword);
+      if (data.role !== 'student') {
+        throw new Error('This reset link belongs to a dashboard account. Please open it from the web dashboard.');
+      }
+
+      await logout();
+    },
+    [logout],
+  );
+
   const changePassword = useCallback(
     async (currentPassword: string, newPassword: string) => {
       const data = await authApi.changePassword(currentPassword, newPassword);
@@ -167,17 +197,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
     },
     [applyAuth, refreshSessionData],
   );
-
-  const logout = useCallback(async () => {
-    setAuthToken(null);
-    setUser(null);
-    setToken(null);
-    setActiveSession(null);
-    setLatestSession(null);
-    setLogs([]);
-    await authStorage.clearToken();
-    await authStorage.clearUser();
-  }, []);
 
   const queueOfflineLog = useCallback(
     async (payload: OfflineLogPayload) => {
@@ -245,6 +264,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       pendingLogs,
       syncState,
       login,
+      forgotPassword,
+      resetPassword,
       logout,
       refreshSessionData,
       queueOfflineLog,
@@ -257,6 +278,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       activeSession,
       booting,
       changePassword,
+      forgotPassword,
       login,
       latestSession,
       logout,
@@ -265,6 +287,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       queueOfflineLog,
       refreshPendingLogs,
       refreshSessionData,
+      resetPassword,
       retryOfflineLog,
       syncNow,
       syncState,

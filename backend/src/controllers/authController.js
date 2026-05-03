@@ -12,6 +12,34 @@ const {
 const getWebDashboardUrl = () =>
   (process.env.WEB_DASHBOARD_URL || 'http://localhost:5173').replace(/\/+$/, '');
 
+const getMobileResetUrl = () =>
+  (process.env.MOBILE_APP_RESET_URL || 'kazilog://reset-password').replace(/\/+$/, '');
+
+const getTrustedMobileResetUrl = (requestedMobileResetUrl) => {
+  if (
+    typeof requestedMobileResetUrl === 'string' &&
+    /^(exp|exps|kazilog):\/\//i.test(requestedMobileResetUrl.trim())
+  ) {
+    return requestedMobileResetUrl.trim().replace(/\/+$/, '');
+  }
+
+  return getMobileResetUrl();
+};
+
+const buildResetUrl = (user, resetToken, requestedClient, requestedMobileResetUrl) => {
+  const client = requestedClient === 'mobile' || requestedClient === 'web'
+    ? requestedClient
+    : user.role === 'student'
+      ? 'mobile'
+      : 'web';
+
+  if (client === 'mobile') {
+    return `${getTrustedMobileResetUrl(requestedMobileResetUrl)}/${resetToken}`;
+  }
+
+  return `${getWebDashboardUrl()}/reset-password/${resetToken}`;
+};
+
 // Generate JWT Token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -180,9 +208,12 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
   await user.save({ validateBeforeSave: false });
 
   // Create reset url
-  const resetUrl = `${getWebDashboardUrl()}/reset-password/${resetToken}`;
+  const resetUrl = buildResetUrl(user, resetToken, req.body.client, req.body.resetUrlBase);
+  const resetInstruction = user.role === 'student'
+    ? 'Open the following link on a device with the KaziLog mobile app installed to reset your password:'
+    : 'Please click on the following link to reset your password:';
 
-  const message = `You are receiving this email because you (or someone else) has requested the reset of a password.\n\nPlease click on the following link to reset your password: \n\n ${resetUrl}`;
+  const message = `You are receiving this email because you (or someone else) has requested the reset of a password.\n\n${resetInstruction}\n\n${resetUrl}`;
 
   try {
     await sendEmail({
