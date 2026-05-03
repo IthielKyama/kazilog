@@ -33,6 +33,20 @@ export const authApi = {
     const { data } = await api.post<AuthResponse>('/auth/login', { email, password });
     return data;
   },
+  async forgotPassword(email: string, resetUrlBase?: string) {
+    const { data } = await api.post<{ success: boolean; data: string }>('/auth/forgotpassword', {
+      email,
+      client: 'mobile',
+      resetUrlBase,
+    });
+    return data;
+  },
+  async resetPassword(resetToken: string, password: string) {
+    const { data } = await api.put<AuthResponse & { success: boolean }>(`/auth/resetpassword/${resetToken}`, {
+      password,
+    });
+    return data;
+  },
   async changePassword(currentPassword: string, newPassword: string) {
     const { data } = await api.put<AuthResponse>('/auth/change-password', {
       currentPassword,

@@ -1,20 +1,40 @@
-import { NavigationContainer } from '@react-navigation/native';
+import { LinkingOptions, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, Text, View } from 'react-native';
 
+import { MOBILE_LINKING_PREFIX } from '../config/env';
 import { useAuth } from '../context/AuthContext';
 import { ForceChangePasswordScreen } from '../screens/auth/ForceChangePasswordScreen';
+import { ForgotPasswordScreen } from '../screens/auth/ForgotPasswordScreen';
 import { LoginScreen } from '../screens/auth/LoginScreen';
+import { ResetPasswordScreen } from '../screens/auth/ResetPasswordScreen';
 import { useTheme } from '../theme/ThemeContext';
 import { TabNavigator } from './TabNavigator';
 
 export type RootStackParamList = {
   Login: undefined;
+  ForgotPassword: undefined;
+  ResetPassword: { token: string };
   ChangePassword: undefined;
   Main: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+const linkingPrefixes = Array.from(new Set([MOBILE_LINKING_PREFIX, 'kazilog://']));
+
+const linking: LinkingOptions<RootStackParamList> = {
+  prefixes: linkingPrefixes,
+  config: {
+    screens: {
+      Login: 'login',
+      ForgotPassword: 'forgot-password',
+      ResetPassword: 'reset-password/:token',
+      ChangePassword: 'change-password',
+      Main: 'main',
+    },
+  },
+};
 
 function SplashScreen() {
   return (
@@ -34,7 +54,7 @@ export function AppNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <Stack.Navigator
         screenOptions={{
           headerShadowVisible: false,
@@ -55,6 +75,8 @@ export function AppNavigator() {
         ) : (
           <Stack.Screen name="Main" component={TabNavigator} options={{ headerShown: false }} />
         )}
+        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: 'Forgot Password' }} />
+        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ title: 'Reset Password' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
