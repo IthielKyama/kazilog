@@ -10,6 +10,7 @@
     "bootstrap:admin": "node create-admin.js",
     "create-admin": "npm run bootstrap:admin",
     "seed:demo": "node seed-demo.js",
+    "seed:awaiting-grading": "node seed-completed-awaiting-grading-student.js",
     "seed:test-data": "node seed-test-data.js",
     "test": "cross-env NODE_ENV=test MONGOMS_MD5_CHECK=false jest --detectOpenHandles --forceExit"
   },
@@ -23,7 +24,8 @@
     "mongoose": "^8.3.2",
     "morgan": "^1.10.0",
     "multer": "^2.1.1",
-    "nodemailer": "^8.0.6"
+    "nodemailer": "^8.0.6",
+    "pdfkit": "^0.18.0"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",

@@ -1,6 +1,11 @@
 const asyncHandler = require('../utils/asyncHandler');
 const AttachmentSession = require('../models/AttachmentSession');
 const LogbookEntry = require('../models/LogbookEntry');
+const {
+  normalizeFinalGradeValue,
+  serializeSessionWithLifecycle,
+  syncSessionLifecycle,
+} = require('../utils/sessionLifecycle');
 
 // @desc    Get all sessions/students assigned to this assessor
 // @route   GET /api/assessor/sessions
@@ -8,18 +13,21 @@ const LogbookEntry = require('../models/LogbookEntry');
 exports.getAssignedSessions = asyncHandler(async (req, res) => {
   const sessions = await AttachmentSession.find({ assessor: req.user.id })
     .populate('student', 'name email registrationNumber')
-    .populate('company', 'name');
+    .populate('company', 'name')
+    .populate('supervisor', 'name email')
+    .populate('assessor', 'name email');
     
-  // For each session, fetch the total number of approved logs to show progress
   const sessionsWithStats = await Promise.all(sessions.map(async (session) => {
+    await syncSessionLifecycle(session);
+
     const totalLogs = await LogbookEntry.countDocuments({ session: session._id });
     const approvedLogs = await LogbookEntry.countDocuments({ session: session._id, supervisorStatus: 'Approved' });
     const rejectedLogs = await LogbookEntry.countDocuments({ session: session._id, supervisorStatus: 'Rejected' });
+    const pendingLogs = totalLogs - approvedLogs - rejectedLogs;
     
-    return {
-      ...session.toObject(),
-      stats: { totalLogs, approvedLogs, rejectedLogs }
-    };
+    return serializeSessionWithLifecycle(session, {
+      stats: { totalLogs, approvedLogs, rejectedLogs, pendingLogs },
+    });
   }));
 
   res.status(200).json({ success: true, data: sessionsWithStats });
@@ -29,13 +37,14 @@ exports.getAssignedSessions = asyncHandler(async (req, res) => {
 // @route   PUT /api/assessor/sessions/:id/grade
 // @access  Private (Assessor only)
 exports.gradeSession = asyncHandler(async (req, res) => {
-  const { finalGrade } = req.body;
-  
-  if (!['A', 'B', 'C', 'D', 'E', 'F', 'Pending'].includes(finalGrade)) {
+  const rawFinalGrade = typeof req.body.finalGrade === 'string' ? req.body.finalGrade.trim().toLowerCase() : '';
+  if (!['pending', 'pass', 'fail'].includes(rawFinalGrade)) {
     res.status(400);
     throw new Error('Invalid grade');
   }
 
+  const finalGrade = normalizeFinalGradeValue(req.body.finalGrade);
+  
   const session = await AttachmentSession.findOne({ 
     _id: req.params.id, 
     assessor: req.user.id 
@@ -47,13 +56,11 @@ exports.gradeSession = asyncHandler(async (req, res) => {
   }
 
   session.finalGrade = finalGrade;
-  
-  // If a final grade (not Pending) is given, the attachment is essentially completed.
-  if(finalGrade !== 'Pending') {
-     session.isActive = false; 
-  }
+  const lifecycle = await syncSessionLifecycle(session);
 
-  await session.save();
-
-  res.status(200).json({ success: true, data: session });
+  res.status(200).json({
+    success: true,
+    data: serializeSessionWithLifecycle(session, {}, undefined),
+    message: lifecycle.sessionStatus,
+  });
 });

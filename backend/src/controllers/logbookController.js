@@ -3,6 +3,45 @@ const LogbookEntry = require('../models/LogbookEntry');
 const AttachmentSession = require('../models/AttachmentSession');
 const Company = require('../models/Company');
 const { calculateDistance } = require('../utils/geofence');
+const { streamSessionPdf } = require('../utils/sessionPdf');
+const {
+  serializeSessionWithLifecycle,
+  syncSessionLifecycle,
+} = require('../utils/sessionLifecycle');
+
+async function loadSessionWithAccess(sessionId, user, populateFields = []) {
+  let query = AttachmentSession.findById(sessionId);
+  populateFields.forEach((field) => {
+    query = query.populate(field.path, field.select);
+  });
+
+  const session = await query;
+
+  if (!session) {
+    const error = new Error('Session not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const resolveId = (value) => {
+    if (!value) return '';
+    if (value._id) return value._id.toString();
+    return value.toString();
+  };
+
+  const hasAccess = user.role === 'admin'
+    || resolveId(session.assessor) === user.id
+    || resolveId(session.supervisor) === user.id
+    || resolveId(session.student) === user.id;
+
+  if (!hasAccess) {
+    const error = new Error('Not authorized to view logs for this session');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return session;
+}
 
 // @desc    Get the active attachment session for the logged-in student
 // @route   GET /api/logs/session/active
@@ -10,21 +49,27 @@ const { calculateDistance } = require('../utils/geofence');
 exports.getActiveStudentSession = asyncHandler(async (req, res) => {
   const session = await AttachmentSession.findOne({
     student: req.user.id,
-    isActive: true,
   })
     .populate('company', 'name address location allowedRadiusMeters')
     .populate('supervisor', 'name email')
     .populate('assessor', 'name email')
-    .sort('-createdAt');
+    .sort({ isActive: -1, endDate: -1, createdAt: -1 });
 
   if (!session) {
     res.status(404);
     throw new Error('No active attachment session found for this student');
   }
 
+  const lifecycle = await syncSessionLifecycle(session);
+
+  if (!lifecycle.isActive) {
+    res.status(404);
+    throw new Error('No active attachment session found for this student');
+  }
+
   res.status(200).json({
     success: true,
-    data: session,
+    data: serializeSessionWithLifecycle(session),
   });
 });
 
@@ -45,9 +90,11 @@ exports.getLatestStudentSession = asyncHandler(async (req, res) => {
     throw new Error('No attachment session found for this student');
   }
 
+  await syncSessionLifecycle(session);
+
   res.status(200).json({
     success: true,
-    data: session,
+    data: serializeSessionWithLifecycle(session),
   });
 });
 
@@ -89,6 +136,12 @@ exports.submitLog = asyncHandler(async (req, res) => {
   if (!session) {
     res.status(404);
     throw new Error('Active attachment session not found');
+  }
+
+  const lifecycle = await syncSessionLifecycle(session);
+  if (!lifecycle.isActive) {
+    res.status(400);
+    throw new Error('This attachment session has already been completed and is awaiting grading.');
   }
 
   const company = session.company;
@@ -186,6 +239,36 @@ exports.getSupervisorLogs = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get sessions for a supervisor workspace
+// @route   GET /api/logs/supervisor/sessions
+// @access  Private (Supervisor only)
+exports.getSupervisorSessions = asyncHandler(async (req, res) => {
+  const sessions = await AttachmentSession.find({ supervisor: req.user.id })
+    .populate('student', 'name email registrationNumber')
+    .populate('company', 'name')
+    .populate('supervisor', 'name email')
+    .populate('assessor', 'name email')
+    .sort({ endDate: -1, createdAt: -1 });
+
+  const sessionsWithStats = await Promise.all(sessions.map(async (session) => {
+    await syncSessionLifecycle(session);
+
+    const totalLogs = await LogbookEntry.countDocuments({ session: session._id });
+    const approvedLogs = await LogbookEntry.countDocuments({ session: session._id, supervisorStatus: 'Approved' });
+    const rejectedLogs = await LogbookEntry.countDocuments({ session: session._id, supervisorStatus: 'Rejected' });
+    const pendingLogs = totalLogs - approvedLogs - rejectedLogs;
+
+    return serializeSessionWithLifecycle(session, {
+      stats: { totalLogs, approvedLogs, rejectedLogs, pendingLogs },
+    });
+  }));
+
+  res.status(200).json({
+    success: true,
+    data: sessionsWithStats,
+  });
+});
+
 // @desc    Approve or reject a log
 // @route   PUT /api/logs/:id/review
 // @access  Private (Supervisor only)
@@ -231,22 +314,40 @@ exports.reviewLog = asyncHandler(async (req, res) => {
 exports.getSessionLogs = asyncHandler(async (req, res) => {
   const { sessionId } = req.params;
   
-  const session = await AttachmentSession.findById(sessionId);
-  if (!session) {
-    res.status(404);
-    throw new Error('Session not found');
-  }
-
-  if (req.user.role !== 'admin' && session.assessor.toString() !== req.user.id && session.supervisor.toString() !== req.user.id) {
-     res.status(403);
-     throw new Error('Not authorized to view logs for this session');
-  }
+  const session = await loadSessionWithAccess(sessionId, req.user);
+  await syncSessionLifecycle(session);
 
   const logs = await LogbookEntry.find({ session: sessionId }).sort('-date');
 
   res.status(200).json({
     success: true,
     count: logs.length,
+    session: serializeSessionWithLifecycle(session),
     data: logs
+  });
+});
+
+// @desc    Download all logs for a specific attachment session
+// @route   GET /api/logs/session/:sessionId/export
+// @access  Private (Assessor or Supervisor or Admin)
+exports.exportSessionLogsPdf = asyncHandler(async (req, res) => {
+  const { sessionId } = req.params;
+
+  const session = await loadSessionWithAccess(sessionId, req.user, [
+    { path: 'student', select: 'name email registrationNumber' },
+    { path: 'company', select: 'name address' },
+    { path: 'supervisor', select: 'name email' },
+    { path: 'assessor', select: 'name email' },
+  ]);
+
+  await syncSessionLifecycle(session);
+
+  const logs = await LogbookEntry.find({ session: sessionId }).sort({ date: 1, createdAt: 1 });
+
+  streamSessionPdf(res, {
+    session: serializeSessionWithLifecycle(session),
+    logs,
+    exportedByRole: req.user.role,
+    exportedByName: req.user.name,
   });
 });

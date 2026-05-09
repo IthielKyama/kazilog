@@ -182,7 +182,7 @@ const SEED = {
       startDate: '2025-09-01',
       endDate: '2025-12-20',
       isActive: false,
-      finalGrade: 'A',
+      finalGrade: 'Pass',
     },
   ],
   logs: [
@@ -494,7 +494,7 @@ async function seedTestData() {
     console.log('1. Brian Odhiambo -> Active Nairobi ICT attachment with approved, rejected, and pending logs.');
     console.log('2. Sharon Chepkemoi -> Active Nakuru operations attachment with approved and pending logs.');
     console.log('3. Kevin Musyoka -> Active Mombasa support attachment with rejected and pending logs.');
-    console.log('4. Faith Wambui -> Completed Kisumu attachment with fully approved logs and final grade A.');
+    console.log('4. Faith Wambui -> Completed Kisumu attachment with fully approved logs and a final pass result.');
   } catch (error) {
     console.error('Failed to seed test data:', error.message);
     process.exitCode = 1;

@@ -1,14 +1,30 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Users, GraduationCap, X, Search, FileText, Building2, ClipboardCheck } from 'lucide-react';
+import {
+  Users,
+  GraduationCap,
+  X,
+  Search,
+  FileText,
+  Building2,
+  ClipboardCheck,
+  Download,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuthStore } from '../store/authStore';
 import { api, buildAuthConfig, extractApiError } from '../lib/api';
 import { CustomSelect } from '../components/CustomSelect';
 import { formatLogDay, groupLogsByWeek, getLogDate } from '../utils/logs';
+import {
+  getFinalGradeTone,
+  getSessionStatusTone,
+  getWeekProgressLabel,
+} from '../utils/sessionLifecycle';
+import { downloadSessionLogsPdf } from '../utils/sessionExport';
 
 const GradeSelect = ({ value, onChange, disabled }) => {
-  const gradeOptions = ['Pending', 'A', 'B', 'C', 'D', 'E', 'F'].map((grade) => ({
+  const normalizedValue = value || 'Pending';
+  const gradeOptions = ['Pending', 'Pass', 'Fail'].map((grade) => ({
     value: grade,
     label: grade,
   }));
@@ -16,31 +32,45 @@ const GradeSelect = ({ value, onChange, disabled }) => {
   return (
     <CustomSelect
       options={gradeOptions}
-      value={value}
+      value={normalizedValue}
       onChange={onChange}
       placeholder="Grade"
       disabled={disabled}
       className={disabled ? 'opacity-60' : ''}
-      buttonClassName={`${
-        value === 'Pending'
-          ? 'bg-amber-50 border-amber-200 text-amber-700'
-          : 'bg-emerald-50 border-emerald-200 text-emerald-700 font-bold'
-      }`}
+      buttonClassName={getFinalGradeTone(normalizedValue)}
     />
   );
 };
 
 function SummaryCard({ label, value, hint }) {
   return (
-    <div className="rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl p-5 shadow-xl shadow-slate-200/40 transition-all hover:-translate-y-0.5">
+    <div className="rounded-3xl border border-slate-200/60 bg-white/70 p-5 shadow-xl shadow-slate-200/40 backdrop-blur-xl transition-all hover:-translate-y-0.5">
       <div className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</div>
-      <div className="mt-3 text-4xl font-extrabold text-slate-900 tracking-tight">{value}</div>
+      <div className="mt-3 text-4xl font-extrabold tracking-tight text-slate-900">{value}</div>
       <p className="mt-2 text-sm leading-6 text-slate-500">{hint}</p>
     </div>
   );
 }
 
-const StudentLogsModal = ({ session, onClose, token }) => {
+function DownloadButton({ onClick, busy, label = 'Download PDF', compact = false }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={busy}
+      className={`inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white font-semibold text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 ${
+        compact ? 'h-9 w-9' : 'px-4 py-2.5 text-sm'
+      }`}
+      title={label}
+      aria-label={label}
+    >
+      <Download size={compact ? 16 : 15} />
+      {compact ? null : <span>{busy ? 'Preparing...' : label}</span>}
+    </button>
+  );
+}
+
+const StudentLogsModal = ({ session, onClose, token, onDownload, downloadBusy }) => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedWeekKey, setSelectedWeekKey] = useState('');
@@ -90,16 +120,38 @@ const StudentLogsModal = ({ session, onClose, token }) => {
   if (!session) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border border-slate-200/50 bg-white shadow-2xl shadow-slate-900/40 animate-in slide-in-from-bottom-4 duration-500">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200/60 px-8 py-6 bg-slate-50/50">
+    <div className="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 duration-300 backdrop-blur-md">
+      <div className="animate-in slide-in-from-bottom-4 flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border border-slate-200/50 bg-white shadow-2xl shadow-slate-900/40 duration-500">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200/60 bg-slate-50/50 px-8 py-6">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">Logs for {session.student?.name}</h2>
             <p className="mt-1 text-sm font-medium text-slate-500">{session.company?.name}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getSessionStatusTone(session.sessionStatusCode)}`}>
+                {session.sessionStatus}
+              </span>
+              <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                {getWeekProgressLabel(session)}
+              </span>
+              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getFinalGradeTone(session.finalGrade)}`}>
+                Grade: {session.finalGrade}
+              </span>
+            </div>
           </div>
-          <button onClick={onClose} className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            <DownloadButton
+              onClick={onDownload}
+              busy={downloadBusy}
+              label={`Download ${session.student?.name || 'student'} PDF`}
+            />
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto bg-slate-50 px-6 py-5">
@@ -191,6 +243,7 @@ export default function AssessorDashboard() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [companyFilter, setCompanyFilter] = useState('All');
   const [selectedSession, setSelectedSession] = useState(null);
+  const [downloadingSessionId, setDownloadingSessionId] = useState('');
   const token = useAuthStore(state => state.token);
 
   useEffect(() => {
@@ -210,7 +263,7 @@ export default function AssessorDashboard() {
 
   const handleGradeChange = async (sessionId, newGrade) => {
     try {
-      await api.put(
+      const { data } = await api.put(
         `/assessor/sessions/${sessionId}/grade`,
         { finalGrade: newGrade },
         buildAuthConfig(token),
@@ -221,22 +274,38 @@ export default function AssessorDashboard() {
       setSessions((current) =>
         current.map((session) =>
           session._id === sessionId
-            ? { ...session, finalGrade: newGrade, isActive: newGrade === 'Pending' }
+            ? { ...session, ...data.data }
             : session,
         ),
       );
+
+      setSelectedSession((current) => (current?._id === sessionId ? { ...current, ...data.data } : current));
     } catch (error) {
       toast.error(extractApiError(error, 'Failed to update grade'));
     }
   };
 
+  const handleSessionDownload = async (session) => {
+    if (!session?._id) return;
+
+    setDownloadingSessionId(session._id);
+    try {
+      await downloadSessionLogsPdf(session._id, token, `${session.student?.name || 'student'}-logs.pdf`);
+      toast.success('PDF download started');
+    } catch (error) {
+      toast.error(extractApiError(error, 'Failed to download PDF'));
+    } finally {
+      setDownloadingSessionId('');
+    }
+  };
+
   const filteredSessions = useMemo(() => {
     return sessions.filter((session) => {
-      const matchesSearch =
-        session.student?.name?.toLowerCase().includes(search.toLowerCase()) ||
-        session.student?.registrationNumber?.toLowerCase().includes(search.toLowerCase());
-      const matchesStatus =
-        statusFilter === 'All' ? true : statusFilter === 'Active' ? session.isActive : !session.isActive;
+      const searchValue = search.trim().toLowerCase();
+      const matchesSearch = !searchValue
+        || session.student?.name?.toLowerCase().includes(searchValue)
+        || session.student?.registrationNumber?.toLowerCase().includes(searchValue);
+      const matchesStatus = statusFilter === 'All' ? true : session.sessionStatusCode === statusFilter;
       const matchesCompany = companyFilter === 'All' ? true : session.company?.name === companyFilter;
 
       return matchesSearch && matchesStatus && matchesCompany;
@@ -245,9 +314,9 @@ export default function AssessorDashboard() {
 
   const summary = useMemo(() => ({
     assignedStudents: sessions.length,
-    activeSessions: sessions.filter((session) => session.isActive).length,
-    completedSessions: sessions.filter((session) => !session.isActive).length,
-    gradingPending: sessions.filter((session) => session.finalGrade === 'Pending').length,
+    activeSessions: sessions.filter((session) => session.sessionStatusCode === 'active').length,
+    awaitingGrading: sessions.filter((session) => session.sessionStatusCode === 'completed_awaiting_grading').length,
+    gradedSessions: sessions.filter((session) => session.sessionStatusCode === 'graded').length,
   }), [sessions]);
 
   const uniqueCompanies = useMemo(() => {
@@ -257,8 +326,9 @@ export default function AssessorDashboard() {
 
   const statusOptions = [
     { value: 'All', label: 'All Statuses' },
-    { value: 'Active', label: 'Active' },
-    { value: 'Completed', label: 'Completed' },
+    { value: 'active', label: 'Ongoing' },
+    { value: 'completed_awaiting_grading', label: 'Completed Awaiting Grading' },
+    { value: 'graded', label: 'Graded' },
   ];
 
   const companyOptions = [
@@ -274,11 +344,11 @@ export default function AssessorDashboard() {
             <GraduationCap className="text-brand" size={32} /> Student Review Workspace
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-            Track assigned students, review their weekly logs, and submit final grades without losing their full session history.
+            Track assigned students, review their weekly logs, download polished reports, and record a final pass or fail decision.
           </p>
         </div>
 
-        <div className="rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl p-4 shadow-xl shadow-slate-200/40">
+        <div className="rounded-3xl border border-slate-200/60 bg-white/70 p-4 shadow-xl shadow-slate-200/40 backdrop-blur-xl">
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
             <div className="relative w-full md:flex-1">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -290,7 +360,7 @@ export default function AssessorDashboard() {
                 className="w-full rounded-lg border border-slate-300 py-2.5 pl-9 pr-4 text-sm text-slate-700 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand"
               />
             </div>
-            <div className="w-full md:w-40">
+            <div className="w-full md:w-60">
               <CustomSelect options={statusOptions} value={statusFilter} onChange={setStatusFilter} placeholder="Status" />
             </div>
             <div className="w-full md:w-52">
@@ -302,16 +372,16 @@ export default function AssessorDashboard() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard label="Assigned Students" value={summary.assignedStudents} hint="Students currently attached to you." />
-        <SummaryCard label="Active Sessions" value={summary.activeSessions} hint="Students who are still logging in the field." />
-        <SummaryCard label="Completed Sessions" value={summary.completedSessions} hint="Students with finished attachment sessions." />
-        <SummaryCard label="Grades Pending" value={summary.gradingPending} hint="Sessions still waiting for a final grade." />
+        <SummaryCard label="Ongoing Sessions" value={summary.activeSessions} hint="Students who are still progressing through the attachment weeks." />
+        <SummaryCard label="Awaiting Grading" value={summary.awaitingGrading} hint="Finished sessions that now need a final assessor decision." />
+        <SummaryCard label="Graded Sessions" value={summary.gradedSessions} hint="Sessions where a final pass or fail outcome has already been recorded." />
       </div>
 
-      <div className="rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl shadow-xl shadow-slate-200/40 overflow-hidden">
+      <div className="overflow-hidden rounded-3xl border border-slate-200/60 bg-white/70 shadow-xl shadow-slate-200/40 backdrop-blur-xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Assigned Students</h2>
-            <p className="mt-1 text-sm text-slate-500">Review progress, inspect weekly logs, and capture the final grade.</p>
+            <p className="mt-1 text-sm text-slate-500">Review progress, inspect weekly logs, export a full session PDF, and capture the final grade.</p>
           </div>
           <div className="hidden items-center gap-2 rounded-full bg-slate-50 px-4 py-2 text-sm font-medium text-slate-500 md:flex">
             <ClipboardCheck size={16} className="text-brand" />
@@ -351,14 +421,23 @@ export default function AssessorDashboard() {
                           <div className="font-semibold text-slate-900">{session.student?.name}</div>
                           <div className="mt-1 text-sm text-slate-500">{session.student?.registrationNumber || 'No registration number'}</div>
                         </div>
-                        <button
-                          onClick={() => setSelectedSession(session)}
-                          className="rounded-full p-2 text-brand transition-colors hover:bg-brand/10"
-                          title="View Logs"
-                          aria-label={`View logs for ${session.student?.name}`}
-                        >
-                          <FileText size={18} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <DownloadButton
+                            onClick={() => handleSessionDownload(session)}
+                            busy={downloadingSessionId === session._id}
+                            label={`Download ${session.student?.name || 'student'} PDF`}
+                            compact
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setSelectedSession(session)}
+                            className="rounded-full p-2 text-brand transition-colors hover:bg-brand/10"
+                            title="View logs"
+                            aria-label={`View logs for ${session.student?.name}`}
+                          >
+                            <FileText size={18} />
+                          </button>
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-5">
@@ -372,18 +451,21 @@ export default function AssessorDashboard() {
                         <div className="mb-2 h-2.5 w-full overflow-hidden rounded-full bg-slate-200">
                           <div
                             className="h-2.5 rounded-full bg-brand"
-                            style={{ width: `${Math.min(100, (session.stats.approvedLogs / (session.stats.totalLogs || 1)) * 100)}%` }}
+                            style={{ width: `${Math.min(100, (session.stats?.approvedLogs / (session.stats?.totalLogs || 1)) * 100)}%` }}
                           />
                         </div>
-                        <div className="text-xs font-medium text-slate-500 mt-2">
-                          {session.stats.approvedLogs} approved • {session.stats.rejectedLogs} rejected / {session.stats.totalLogs} total
+                        <div className="mt-2 text-xs font-medium text-slate-500">
+                          {session.stats?.approvedLogs || 0} approved • {session.stats?.rejectedLogs || 0} rejected / {session.stats?.totalLogs || 0} total
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-5">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${session.isActive ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700'}`}>
-                        {session.isActive ? 'Active' : 'Completed'}
-                      </span>
+                      <div className="space-y-2">
+                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getSessionStatusTone(session.sessionStatusCode)}`}>
+                          {session.sessionStatus}
+                        </span>
+                        <div className="text-xs font-medium text-slate-500">{getWeekProgressLabel(session)}</div>
+                      </div>
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex justify-end">
@@ -391,7 +473,7 @@ export default function AssessorDashboard() {
                           <GradeSelect
                             value={session.finalGrade}
                             onChange={(value) => handleGradeChange(session._id, value)}
-                            disabled={!session.isActive && session.finalGrade !== 'Pending'}
+                            disabled={loading}
                           />
                         </div>
                       </div>
@@ -404,7 +486,13 @@ export default function AssessorDashboard() {
         </div>
       </div>
 
-      <StudentLogsModal session={selectedSession} onClose={() => setSelectedSession(null)} token={token} />
+      <StudentLogsModal
+        session={selectedSession}
+        onClose={() => setSelectedSession(null)}
+        token={token}
+        onDownload={() => handleSessionDownload(selectedSession)}
+        downloadBusy={downloadingSessionId === selectedSession?._id}
+      />
     </div>
   );
 }

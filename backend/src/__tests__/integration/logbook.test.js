@@ -89,7 +89,7 @@ describe('GET /api/logs/session/latest', () => {
   test('returns the most recent completed session when no active session exists', async () => {
     const scenario = await createScenario();
     scenario.session.isActive = false;
-    scenario.session.finalGrade = 'A';
+    scenario.session.finalGrade = 'Pass';
     await scenario.session.save();
 
     const latestCompleted = await AttachmentSession.create({
@@ -100,7 +100,7 @@ describe('GET /api/logs/session/latest', () => {
       startDate: new Date('2026-02-01'),
       endDate: new Date('2027-02-28'),
       isActive: false,
-      finalGrade: 'B',
+      finalGrade: 'Pass',
     });
 
     const olderCompleted = await AttachmentSession.create({
@@ -111,7 +111,7 @@ describe('GET /api/logs/session/latest', () => {
       startDate: new Date('2024-01-01'),
       endDate: new Date('2025-12-31'),
       isActive: false,
-      finalGrade: 'C',
+      finalGrade: 'Fail',
     });
 
     const res = await request(app)
@@ -121,7 +121,7 @@ describe('GET /api/logs/session/latest', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.data._id.toString()).toBe(latestCompleted._id.toString());
     expect(res.body.data._id.toString()).not.toBe(olderCompleted._id.toString());
-    expect(res.body.data.finalGrade).toBe('B');
+    expect(res.body.data.finalGrade).toBe('Pass');
   });
 });
 
@@ -195,7 +195,7 @@ describe('GET /api/logs/student', () => {
       startDate: new Date('2025-01-01'),
       endDate: new Date('2025-06-30'),
       isActive: false,
-      finalGrade: 'A',
+      finalGrade: 'Pass',
     });
 
     const targetLog = await createLogEntry(scenario.session._id, scenario.student.user._id);
@@ -234,5 +234,50 @@ describe('GET /api/logs/session/:sessionId', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.count).toBe(2);
     expect(res.body.data.map((log) => log.supervisorStatus).sort()).toEqual(['Approved', 'Rejected']);
+  });
+
+  test('returns session lifecycle metadata with session logs', async () => {
+    const scenario = await createScenario();
+
+    const res = await request(app)
+      .get(`/api/logs/session/${scenario.session._id}`)
+      .set('Authorization', `Bearer ${scenario.assessor.token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.session.sessionStatusCode).toBe('active');
+    expect(res.body.session.weekProgress.label).toMatch(/^Week \d+\/\d+$/);
+  });
+});
+
+describe('GET /api/logs/supervisor/sessions', () => {
+  test('returns supervisor sessions with lifecycle and stats', async () => {
+    const scenario = await createScenario();
+    await createLogEntry(scenario.session._id, scenario.student.user._id, { supervisorStatus: 'Approved' });
+    await createLogEntry(scenario.session._id, scenario.student.user._id, { supervisorStatus: 'Pending' });
+
+    const res = await request(app)
+      .get('/api/logs/supervisor/sessions')
+      .set('Authorization', `Bearer ${scenario.supervisor.token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].stats.totalLogs).toBe(2);
+    expect(res.body.data[0].stats.pendingLogs).toBe(1);
+    expect(res.body.data[0].sessionStatusCode).toBe('active');
+  });
+});
+
+describe('GET /api/logs/session/:sessionId/export', () => {
+  test('streams a PDF export for an authorized supervisor', async () => {
+    const scenario = await createScenario();
+    await createLogEntry(scenario.session._id, scenario.student.user._id, { supervisorStatus: 'Approved' });
+
+    const res = await request(app)
+      .get(`/api/logs/session/${scenario.session._id}/export`)
+      .set('Authorization', `Bearer ${scenario.supervisor.token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toMatch(/application\/pdf/);
+    expect(res.headers['content-disposition']).toMatch(/attachment/);
   });
 });

@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 
+const { normalizeFinalGradeValue } = require('../utils/sessionLifecycle');
+
 const attachmentSessionSchema = new mongoose.Schema({
   student: {
     type: mongoose.Schema.ObjectId,
@@ -35,8 +37,9 @@ const attachmentSessionSchema = new mongoose.Schema({
   },
   finalGrade: {
     type: String,
-    enum: ['A', 'B', 'C', 'D', 'E', 'F', 'Pending'],
-    default: 'Pending'
+    enum: ['Pending', 'Pass', 'Fail'],
+    default: 'Pending',
+    set: normalizeFinalGradeValue,
   }
 }, {
   timestamps: true

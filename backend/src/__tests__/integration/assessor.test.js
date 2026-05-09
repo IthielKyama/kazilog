@@ -71,10 +71,11 @@ describe('GET /api/assessor/sessions', () => {
 describe('PUT /api/assessor/sessions/:id/grade', () => {
   test('grades a session successfully', async () => {
     const sc = await makeScenario();
-    const res = await request(app).put(`/api/assessor/sessions/${sc.session._id}/grade`).set('Authorization', `Bearer ${sc.assessor.token}`).send({ finalGrade: 'A' });
+    const res = await request(app).put(`/api/assessor/sessions/${sc.session._id}/grade`).set('Authorization', `Bearer ${sc.assessor.token}`).send({ finalGrade: 'Pass' });
     expect(res.statusCode).toBe(200);
-    expect(res.body.data.finalGrade).toBe('A');
+    expect(res.body.data.finalGrade).toBe('Pass');
     expect(res.body.data.isActive).toBe(false);
+    expect(res.body.data.sessionStatusCode).toBe('graded');
   });
 
   test('keeps session active with Pending grade', async () => {
@@ -93,7 +94,7 @@ describe('PUT /api/assessor/sessions/:id/grade', () => {
   test('returns 404 for unauthorized assessor', async () => {
     const sc = await makeScenario();
     const other = await makeUser('assessor');
-    const res = await request(app).put(`/api/assessor/sessions/${sc.session._id}/grade`).set('Authorization', `Bearer ${other.token}`).send({ finalGrade: 'B' });
+    const res = await request(app).put(`/api/assessor/sessions/${sc.session._id}/grade`).set('Authorization', `Bearer ${other.token}`).send({ finalGrade: 'Fail' });
     expect(res.statusCode).toBe(404);
   });
 });

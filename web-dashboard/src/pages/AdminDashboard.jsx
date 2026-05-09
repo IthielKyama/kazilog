@@ -613,7 +613,7 @@ function SessionList({ sessions, loading }) {
                 </td>
                 <td className="px-6 py-4">
                   <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${session.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}>
-                    {session.isActive ? 'Active' : 'Completed'}
+                    {session.isActive ? 'Ongoing' : 'Completed'}
                   </span>
                 </td>
               </tr>

@@ -12,6 +12,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import ForceChangePassword from './pages/ForceChangePassword';
 import { api, buildAuthConfig, extractApiError } from './lib/api';
+import { getSessionStatusTone, getWeekProgressLabel } from './utils/sessionLifecycle';
 
 function SurfaceCard({ children, className = '' }) {
   return <div className={`rounded-3xl border border-slate-200/60 bg-white/70 backdrop-blur-xl shadow-xl shadow-slate-200/40 ${className}`}>{children}</div>;
@@ -267,19 +268,19 @@ function AssessorHome() {
 
   const summary = useMemo(() => {
     const assignedStudents = sessions.length;
-    const activeSessions = sessions.filter(session => session.isActive).length;
-    const completedSessions = sessions.filter(session => !session.isActive).length;
-    const gradingPending = sessions.filter(session => session.finalGrade === 'Pending').length;
+    const activeSessions = sessions.filter(session => session.sessionStatusCode === 'active').length;
+    const awaitingGrading = sessions.filter(session => session.sessionStatusCode === 'completed_awaiting_grading').length;
+    const gradedSessions = sessions.filter(session => session.sessionStatusCode === 'graded').length;
 
-    return { assignedStudents, activeSessions, completedSessions, gradingPending };
+    return { assignedStudents, activeSessions, awaitingGrading, gradedSessions };
   }, [sessions]);
 
   const gradingQueue = useMemo(() => (
     sessions
-      .filter((session) => session.finalGrade === 'Pending')
+      .filter((session) => session.sessionStatusCode !== 'graded')
       .sort((left, right) => {
-        if (left.isActive !== right.isActive) {
-          return Number(right.isActive) - Number(left.isActive);
+        if (left.sessionStatusCode !== right.sessionStatusCode) {
+          return left.sessionStatusCode === 'completed_awaiting_grading' ? -1 : 1;
         }
 
         return (right.stats?.approvedLogs || 0) - (left.stats?.approvedLogs || 0);
@@ -311,7 +312,7 @@ function AssessorHome() {
 
   const recentlyCompleted = useMemo(() => (
     sessions
-      .filter((session) => !session.isActive)
+      .filter((session) => session.sessionStatusCode === 'graded')
       .slice(0, 3)
   ), [sessions]);
 
@@ -335,9 +336,9 @@ function AssessorHome() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
           ['Assigned Students', summary.assignedStudents, 'Students currently attached to you.'],
-          ['Active Sessions', summary.activeSessions, 'Students still in the field and still logging.'],
-          ['Completed Sessions', summary.completedSessions, 'Students whose attachment sessions are finished.'],
-          ['Grades Pending', summary.gradingPending, 'Sessions still waiting for a final assessor grade.'],
+          ['Ongoing Sessions', summary.activeSessions, 'Students still in the field and still logging.'],
+          ['Awaiting Grading', summary.awaitingGrading, 'Students who have finished all weeks and now need a final decision.'],
+          ['Graded Sessions', summary.gradedSessions, 'Sessions with a recorded pass or fail outcome.'],
         ].map(([label, value, hint]) => (
           <SurfaceCard key={label} className="p-5">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</div>
@@ -366,8 +367,8 @@ function AssessorHome() {
                       <div className="font-semibold text-slate-900">{session.student?.name}</div>
                       <div className="mt-1 text-sm text-slate-500">{session.student?.registrationNumber || 'No registration number'}</div>
                     </div>
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${session.finalGrade === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                      {session.finalGrade}
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getSessionStatusTone(session.sessionStatusCode)}`}>
+                      {session.sessionStatus}
                     </span>
                   </div>
                   <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -381,7 +382,11 @@ function AssessorHome() {
                     </div>
                     <div>
                       <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Next focus</div>
-                      <div className="mt-1 text-sm text-slate-700">{session.isActive ? 'Track progress before grading' : 'Ready for final grade'}</div>
+                      <div className="mt-1 text-sm text-slate-700">
+                        {session.sessionStatusCode === 'active'
+                          ? `Track progress through ${getWeekProgressLabel(session)}`
+                          : 'Ready for final grading'}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -423,14 +428,14 @@ function AssessorHome() {
                           <div className="truncate text-sm font-semibold text-slate-900">{session.student?.name}</div>
                           <div className="truncate text-xs text-slate-500">{session.company?.name}</div>
                         </div>
-                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getSessionStatusTone(session.sessionStatusCode)}`}>
                           {session.finalGrade}
                         </span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="mt-2 text-sm leading-6 text-slate-500">Completed sessions will appear here after final grading.</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-500">Graded sessions will appear here after a final pass or fail decision.</p>
                 )}
               </div>
             </div>
@@ -453,9 +458,9 @@ function AssessorHome() {
         </div>
         <div className="mt-5 grid gap-4 md:grid-cols-3">
           {[
-            ['Start with pending grades', 'Use the queue above to spot sessions that still need a final decision.'],
+            ['Start with awaiting sessions', 'Use the queue above to spot students who have finished all weeks and now need a final decision.'],
             ['Review one week at a time', 'Open a student record and use the weekly log modal to stay focused.'],
-            ['Grade without losing history', 'Completed sessions remain visible in the student reviews tab after grading.'],
+            ['Grade without losing history', 'Graded sessions remain visible in the student reviews tab after the final decision is saved.'],
           ].map(([title, text]) => (
             <div key={title} className="rounded-2xl bg-slate-50 p-4">
               <div className="text-sm font-semibold text-slate-900">{title}</div>

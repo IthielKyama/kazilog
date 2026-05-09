@@ -6,11 +6,12 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import AssessorDashboard from './AssessorDashboard';
 import { useAuthStore } from '../store/authStore';
 
-const { apiMock } = vi.hoisted(() => ({
+const { apiMock, downloadSessionLogsPdfMock } = vi.hoisted(() => ({
   apiMock: {
     get: vi.fn(),
     put: vi.fn(),
   },
+  downloadSessionLogsPdfMock: vi.fn(),
 }));
 
 vi.mock('../lib/api', () => ({
@@ -21,10 +22,16 @@ vi.mock('../lib/api', () => ({
   extractApiError: (error, fallback) => error?.response?.data?.message || fallback,
 }));
 
+vi.mock('../utils/sessionExport', () => ({
+  downloadSessionLogsPdf: downloadSessionLogsPdfMock,
+}));
+
 describe('AssessorDashboard', () => {
   beforeEach(() => {
     apiMock.get.mockReset();
     apiMock.put.mockReset();
+    downloadSessionLogsPdfMock.mockReset();
+
     useAuthStore.setState({
       user: { _id: 'assessor-1', name: 'Assessor User', email: 'assessor@test.com', role: 'assessor', mustChangePassword: false },
       token: 'assessor-token',
@@ -38,9 +45,12 @@ describe('AssessorDashboard', () => {
               _id: 'session-1',
               isActive: true,
               finalGrade: 'Pending',
-              student: { name: 'Amina Njeri', registrationNumber: 'TVET-ATT-2026-001' },
+              sessionStatus: 'Ongoing',
+              sessionStatusCode: 'active',
+              weekProgress: { label: 'Week 3/17' },
+              student: { _id: 'student-1', name: 'Amina Njeri', registrationNumber: 'TVET-ATT-2026-001' },
               company: { name: 'Demo Company' },
-              stats: { approvedLogs: 1, totalLogs: 2 },
+              stats: { approvedLogs: 1, rejectedLogs: 0, totalLogs: 2, pendingLogs: 1 },
             },
           ],
         },
@@ -54,6 +64,7 @@ describe('AssessorDashboard', () => {
               tasksDone: 'Configured user accounts',
               skillsLearned: 'Identity provisioning',
               supervisorComment: 'Good progress.',
+              supervisorStatus: 'Approved',
               isWithinBoundary: true,
             },
           ],
@@ -61,33 +72,49 @@ describe('AssessorDashboard', () => {
       });
   });
 
-  test('opens approved logs and submits a final grade', async () => {
+  test('opens logs and submits a pass grade', async () => {
     const user = userEvent.setup();
-    apiMock.put.mockResolvedValueOnce({ data: { success: true } });
+    apiMock.put.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          _id: 'session-1',
+          finalGrade: 'Pass',
+          sessionStatus: 'Graded',
+          sessionStatusCode: 'graded',
+          weekProgress: { label: 'Week 17/17' },
+          isActive: false,
+        },
+      },
+    });
 
     render(<AssessorDashboard />);
 
     expect(await screen.findByText(/amina njeri/i)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /view logs/i }));
+    expect(screen.getByText(/week 3\/17/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /view logs for amina njeri/i }));
     expect(await screen.findByText(/logs for amina njeri/i)).toBeInTheDocument();
     expect(screen.getByText(/good progress/i)).toBeInTheDocument();
 
-    const gradeCell = screen.getByRole('button', { name: /pending/i });
+    const gradeCell = screen.getAllByRole('button', { name: /pending/i }).find((button) => button.getAttribute('aria-haspopup') === 'listbox');
     await user.click(gradeCell);
-    await user.click(within(screen.getByRole('listbox')).getByRole('option', { name: 'A' }));
+    await user.click(within(screen.getByRole('listbox')).getByRole('option', { name: 'Pass' }));
 
     await waitFor(() => {
       expect(apiMock.put).toHaveBeenCalledWith(
         '/assessor/sessions/session-1/grade',
-        { finalGrade: 'A' },
+        { finalGrade: 'Pass' },
         expect.objectContaining({
           headers: { Authorization: 'Bearer assessor-token' },
         }),
       );
     });
+
+    expect(screen.getAllByText(/graded/i).length).toBeGreaterThan(0);
   });
 
-  test('shows overview metrics and filters modal logs by week', async () => {
+  test('downloads the selected student report and filters modal logs by week', async () => {
     const user = userEvent.setup();
 
     apiMock.get
@@ -97,11 +124,14 @@ describe('AssessorDashboard', () => {
           data: [
             {
               _id: 'session-1',
-              isActive: true,
+              isActive: false,
               finalGrade: 'Pending',
-              student: { name: 'Amina Njeri', registrationNumber: 'TVET-ATT-2026-001' },
+              sessionStatus: 'Completed but awaiting grading',
+              sessionStatusCode: 'completed_awaiting_grading',
+              weekProgress: { label: 'Week 17/17' },
+              student: { _id: 'student-1', name: 'Amina Njeri', registrationNumber: 'TVET-ATT-2026-001' },
               company: { name: 'Demo Company' },
-              stats: { approvedLogs: 1, totalLogs: 2 },
+              stats: { approvedLogs: 1, rejectedLogs: 0, totalLogs: 2, pendingLogs: 1 },
             },
           ],
         },
@@ -134,7 +164,17 @@ describe('AssessorDashboard', () => {
     render(<AssessorDashboard />);
 
     expect((await screen.findAllByText(/assigned students/i)).length).toBeGreaterThan(0);
-    expect(screen.getAllByText('1').length).toBeGreaterThan(0);
+    expect(screen.getByText(/ongoing sessions/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/completed but awaiting grading/i).length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole('button', { name: /download amina njeri pdf/i }));
+    await waitFor(() => {
+      expect(downloadSessionLogsPdfMock).toHaveBeenCalledWith(
+        'session-1',
+        'assessor-token',
+        'Amina Njeri-logs.pdf',
+      );
+    });
 
     await user.click(screen.getByRole('button', { name: /view logs for amina njeri/i }));
     expect(await screen.findByText(/logs for amina njeri/i)).toBeInTheDocument();

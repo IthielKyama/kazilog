@@ -6,11 +6,12 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import SupervisorDashboard from './SupervisorDashboard';
 import { useAuthStore } from '../store/authStore';
 
-const { apiMock } = vi.hoisted(() => ({
+const { apiMock, downloadSessionLogsPdfMock } = vi.hoisted(() => ({
   apiMock: {
     get: vi.fn(),
     put: vi.fn(),
   },
+  downloadSessionLogsPdfMock: vi.fn(),
 }));
 
 vi.mock('../lib/api', () => ({
@@ -21,31 +22,54 @@ vi.mock('../lib/api', () => ({
   extractApiError: (error, fallback) => error?.response?.data?.message || fallback,
 }));
 
+vi.mock('../utils/sessionExport', () => ({
+  downloadSessionLogsPdf: downloadSessionLogsPdfMock,
+}));
+
 describe('SupervisorDashboard', () => {
   beforeEach(() => {
     apiMock.get.mockReset();
     apiMock.put.mockReset();
+    downloadSessionLogsPdfMock.mockReset();
+
     useAuthStore.setState({
       user: { _id: 'supervisor-1', name: 'Supervisor User', email: 'supervisor@test.com', role: 'supervisor', mustChangePassword: false },
       token: 'supervisor-token',
     });
 
-    apiMock.get.mockResolvedValue({
-      data: {
-        data: [
-          {
-            _id: 'log-1',
-            date: '2026-05-02T00:00:00.000Z',
-            tasksDone: 'Reviewed service tickets',
-            skillsLearned: 'Incident handling',
-            supervisorStatus: 'Pending',
-            supervisorComment: '',
-            isWithinBoundary: true,
-            student: { name: 'Amina Njeri' },
-          },
-        ],
-      },
-    });
+    apiMock.get
+      .mockResolvedValueOnce({
+        data: {
+          data: [
+            {
+              _id: 'log-1',
+              session: 'session-1',
+              date: '2026-05-02T00:00:00.000Z',
+              tasksDone: 'Reviewed service tickets',
+              skillsLearned: 'Incident handling',
+              supervisorStatus: 'Pending',
+              supervisorComment: '',
+              isWithinBoundary: true,
+              student: { _id: 'student-1', name: 'Amina Njeri' },
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          data: [
+            {
+              _id: 'session-1',
+              sessionStatus: 'Ongoing',
+              sessionStatusCode: 'active',
+              weekProgress: { label: 'Week 2/17' },
+              student: { _id: 'student-1', name: 'Amina Njeri' },
+              company: { name: 'Demo Company' },
+              stats: { approvedLogs: 0, rejectedLogs: 0, pendingLogs: 1, totalLogs: 1 },
+            },
+          ],
+        },
+      });
   });
 
   test('submits review comments with approval', async () => {
@@ -72,45 +96,74 @@ describe('SupervisorDashboard', () => {
     });
   });
 
-  test('filters the review list by student and week', async () => {
+  test('filters the review list by student and week and downloads the selected student report', async () => {
     const user = userEvent.setup();
 
-    apiMock.get.mockResolvedValueOnce({
-      data: {
-        data: [
-          {
-            _id: 'log-1',
-            date: '2026-05-12T00:00:00.000Z',
-            tasksDone: 'Reviewed service tickets',
-            skillsLearned: 'Incident handling',
-            supervisorStatus: 'Pending',
-            supervisorComment: '',
-            isWithinBoundary: true,
-            student: { _id: 'student-2', name: 'Brian Otieno' },
-          },
-          {
-            _id: 'log-2',
-            date: '2026-05-01T00:00:00.000Z',
-            tasksDone: 'Network setup support',
-            skillsLearned: 'LAN troubleshooting',
-            supervisorStatus: 'Pending',
-            supervisorComment: '',
-            isWithinBoundary: true,
-            student: { _id: 'student-2', name: 'Brian Otieno' },
-          },
-          {
-            _id: 'log-3',
-            date: '2026-05-05T00:00:00.000Z',
-            tasksDone: 'Filed support reports',
-            skillsLearned: 'Documentation',
-            supervisorStatus: 'Pending',
-            supervisorComment: '',
-            isWithinBoundary: true,
-            student: { _id: 'student-1', name: 'Amina Njeri' },
-          },
-        ],
-      },
-    });
+    apiMock.get
+      .mockReset()
+      .mockResolvedValueOnce({
+        data: {
+          data: [
+            {
+              _id: 'log-1',
+              session: 'session-2',
+              date: '2026-05-12T00:00:00.000Z',
+              tasksDone: 'Reviewed service tickets',
+              skillsLearned: 'Incident handling',
+              supervisorStatus: 'Pending',
+              supervisorComment: '',
+              isWithinBoundary: true,
+              student: { _id: 'student-2', name: 'Brian Otieno' },
+            },
+            {
+              _id: 'log-2',
+              session: 'session-2',
+              date: '2026-05-01T00:00:00.000Z',
+              tasksDone: 'Network setup support',
+              skillsLearned: 'LAN troubleshooting',
+              supervisorStatus: 'Pending',
+              supervisorComment: '',
+              isWithinBoundary: true,
+              student: { _id: 'student-2', name: 'Brian Otieno' },
+            },
+            {
+              _id: 'log-3',
+              session: 'session-1',
+              date: '2026-05-05T00:00:00.000Z',
+              tasksDone: 'Filed support reports',
+              skillsLearned: 'Documentation',
+              supervisorStatus: 'Pending',
+              supervisorComment: '',
+              isWithinBoundary: true,
+              student: { _id: 'student-1', name: 'Amina Njeri' },
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          data: [
+            {
+              _id: 'session-1',
+              sessionStatus: 'Ongoing',
+              sessionStatusCode: 'active',
+              weekProgress: { label: 'Week 2/17' },
+              student: { _id: 'student-1', name: 'Amina Njeri' },
+              company: { name: 'Demo Company' },
+              stats: { approvedLogs: 0, rejectedLogs: 0, pendingLogs: 1, totalLogs: 1 },
+            },
+            {
+              _id: 'session-2',
+              sessionStatus: 'Completed but awaiting grading',
+              sessionStatusCode: 'completed_awaiting_grading',
+              weekProgress: { label: 'Week 17/17' },
+              student: { _id: 'student-2', name: 'Brian Otieno' },
+              company: { name: 'Field Site' },
+              stats: { approvedLogs: 0, rejectedLogs: 0, pendingLogs: 2, totalLogs: 2 },
+            },
+          ],
+        },
+      });
 
     render(<SupervisorDashboard />);
 
@@ -122,6 +175,16 @@ describe('SupervisorDashboard', () => {
 
     expect(screen.getAllByText(/brian otieno/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(/filed support reports/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/week 17\/17/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /download brian otieno pdf/i }));
+    await waitFor(() => {
+      expect(downloadSessionLogsPdfMock).toHaveBeenCalledWith(
+        'session-2',
+        'supervisor-token',
+        'Brian Otieno-logs.pdf',
+      );
+    });
 
     await user.click(screen.getAllByRole('button').find((button) => /may 2026/i.test(button.textContent || '')));
     await user.click(within(screen.getByRole('listbox')).getByRole('option', { name: /27 apr - 03 may 2026/i }));

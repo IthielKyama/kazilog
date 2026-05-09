@@ -78,6 +78,7 @@ This reads `ADMIN_NAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` from `backend/.env`
 - `npm run dev:mobile`: start the Expo mobile app
 - `npm run bootstrap:admin`: create or update the initial admin user
 - `npm run seed:demo`: seed one full end-to-end demo scenario
+- `npm run seed:test-data`: clear application data and seed multiple realistic attachment scenarios
 - `npm run check`: run backend tests, dashboard tests and build, and mobile typecheck
 
 ### Backend
@@ -87,6 +88,7 @@ This reads `ADMIN_NAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` from `backend/.env`
 - `npm --prefix backend run bootstrap:admin`
 - `npm --prefix backend run create-admin`
 - `npm --prefix backend run seed:demo`
+- `npm --prefix backend run seed:test-data`
 - `npm --prefix backend test`
 
 ### Web Dashboard
@@ -157,7 +159,7 @@ The mobile app registers the custom URL scheme `kazilog://` for student password
 3. Run `npm run dev`.
 4. Run `npm run dev:mobile`.
 5. Run `npm run bootstrap:admin`.
-6. Run `npm run seed:demo`.
+6. Run `npm run seed:test-data`.
 7. Sign into the dashboard with either the admin credentials from `backend/.env` or the seeded demo credentials below.
 8. Sign into the mobile app as the seeded student and test live submissions from within the configured geofence.
 9. Sign into the dashboard as the seeded supervisor to review logs.
@@ -189,6 +191,31 @@ Seeded credentials:
 - Student: `student.demo@kazilog.com` / `Student1!`
 
 The seed script is idempotent for the demo records. Re-running it refreshes the same scenario instead of creating duplicates.
+
+## Comprehensive Test Seed
+
+Run:
+
+```powershell
+npm run seed:test-data
+```
+
+This command clears the application collections and creates a broader QA dataset for local development, demonstrations, and Chapter 6 testing:
+
+- 2 admin accounts
+- 3 supervisors
+- 2 assessors
+- 4 students
+- 4 companies with Kenyan geofence coordinates
+- 4 attachment sessions
+- 13 logbook entries across `Approved`, `Rejected`, and `Pending` states
+
+Seeded scenarios include:
+
+- Brian Odhiambo: active Nairobi ICT attachment with mixed log review outcomes
+- Sharon Chepkemoi: active Nakuru operations attachment with approved and pending logs
+- Kevin Musyoka: active Mombasa support attachment with rejected and pending logs
+- Faith Wambui: completed Kisumu attachment with approved logs and final grade `A`
 
 ## Full Manual Test Guide
 
