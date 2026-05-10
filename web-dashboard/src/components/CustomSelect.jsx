@@ -41,15 +41,17 @@ export function CustomSelect({
 
       if (spaceBelow < menuMaxHeight && spaceAbove > spaceBelow) {
         setMenuPosition({
-          bottom: window.innerHeight - rect.top + 6,
+          top: rect.top + window.scrollY - 6,
           left: rect.left + window.scrollX,
           width: rect.width,
+          isTop: true,
         });
       } else {
         setMenuPosition({
           top: rect.bottom + window.scrollY + 6,
           left: rect.left + window.scrollX,
           width: rect.width,
+          isTop: false,
         });
       }
     };
@@ -121,12 +123,12 @@ export function CustomSelect({
               className={`z-[1000] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg animate-in fade-in slide-in-from-top-2 ${menuClassName}`}
               style={{
                 position: 'absolute',
-                ...(menuPosition.top ? { top: menuPosition.top } : {}),
-                ...(menuPosition.bottom ? { bottom: menuPosition.bottom } : {}),
+                top: menuPosition.top,
                 left: menuPosition.left,
                 width: menuPosition.width,
                 maxHeight: 280,
                 overflowY: 'auto',
+                transform: menuPosition.isTop ? 'translateY(-100%)' : 'none',
               }}
             >
               {options.map((option) => (
