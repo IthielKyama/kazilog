@@ -1,7 +1,12 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
-import { Award } from 'lucide-react-native';
+import { Platform, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Award, Download } from 'lucide-react-native';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import Toast from 'react-native-toast-message';
+
+import { API_BASE_URL } from '../../config/env';
 
 import { InfoCard } from '../../components/InfoCard';
 import { useAuth } from '../../context/AuthContext';
@@ -9,9 +14,10 @@ import { groupItemsByWeek, formatDayLabel, getEntryDate } from '../../utils/logG
 import { useTheme } from '../../theme/ThemeContext';
 
 export function ProgressScreen() {
-  const { logs, latestSession, refreshSessionData } = useAuth();
+  const { logs, latestSession, refreshSessionData, token } = useAuth();
   const { colors } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [selectedWeekKey, setSelectedWeekKey] = useState<string | null>(null);
 
   useFocusEffect(
@@ -61,6 +67,65 @@ export function ProgressScreen() {
     }
   };
 
+  const handleExportPdf = async () => {
+    if (!latestSession?._id) return;
+    
+    setDownloading(true);
+    try {
+      const filename = `attachment-log-report.pdf`;
+      
+      if (Platform.OS === 'web') {
+        const response = await fetch(`${API_BASE_URL}/logs/session/${latestSession._id}/export`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        
+        if (!response.ok) throw new Error('Failed to download PDF');
+        
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(blobUrl);
+        Toast.show({ type: 'success', text1: 'Downloaded successfully' });
+      } else {
+        const fileUri = `${FileSystem.documentDirectory}${filename}`;
+        
+        const downloadRes = await FileSystem.downloadAsync(
+          `${API_BASE_URL}/logs/session/${latestSession._id}/export`,
+          fileUri,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+        
+        if (downloadRes.status !== 200) {
+          throw new Error('Failed to download PDF');
+        }
+        
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: 'application/pdf',
+            dialogTitle: 'Export Log Report',
+          });
+        } else {
+          Toast.show({ type: 'success', text1: 'Saved successfully', text2: 'File saved to your device' });
+        }
+      }
+    } catch (error: any) {
+      Toast.show({ type: 'error', text1: 'Export Failed', text2: error?.message || 'Could not generate PDF report' });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const statCards = [
     { label: 'Total Logs', value: summary.total, bg: colors.brandSoft, accent: colors.brand },
     { label: 'Approved', value: summary.approved, bg: colors.successSoft ?? '#dcfce7', accent: colors.success },
@@ -76,6 +141,26 @@ export function ProgressScreen() {
     >
       {/* Summary Statistics */}
       <InfoCard title="Attachment Progress" subtitle="Track your logs, feedback, and final assessment in one place.">
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 16 }}>
+          <Pressable
+            onPress={handleExportPdf}
+            disabled={downloading || !latestSession}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: colors.brand,
+              paddingHorizontal: 16,
+              paddingVertical: 10,
+              borderRadius: 99,
+              opacity: (downloading || !latestSession) ? 0.6 : 1,
+            }}
+          >
+            <Download size={16} color="#ffffff" style={{ marginRight: 8 }} />
+            <Text style={{ color: '#ffffff', fontWeight: '600', fontSize: 13 }}>
+              {downloading ? 'Preparing...' : 'Export PDF'}
+            </Text>
+          </Pressable>
+        </View>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
           {statCards.map((item) => (
             <View

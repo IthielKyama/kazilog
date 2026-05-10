@@ -236,6 +236,46 @@ const StudentLogsModal = ({ session, onClose, token, onDownload, downloadBusy })
   );
 };
 
+const ConfirmModal = ({ isOpen, onClose, onConfirm, newGrade }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="animate-in fade-in fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4 duration-300 backdrop-blur-md">
+      <div className="animate-in zoom-in-95 flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-slate-200/50 bg-white shadow-2xl shadow-slate-900/40">
+        <div className="border-b border-slate-200/60 bg-slate-50/50 px-8 py-6">
+          <h2 className="text-xl font-bold text-slate-900">Confirm Final Grade</h2>
+        </div>
+        <div className="px-8 py-6 text-slate-600">
+          <p className="text-base leading-relaxed">
+            Are you sure you want to assign a final grade of <span className="font-bold text-slate-900">{newGrade}</span>?
+          </p>
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm font-medium text-amber-800">
+              This action is permanent and cannot be changed later.
+            </p>
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50/50 px-8 py-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full px-5 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-200"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white shadow-md shadow-brand/20 transition-all hover:opacity-90 hover:shadow-lg hover:shadow-brand/30"
+          >
+            Confirm {newGrade}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function AssessorDashboard() {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -244,6 +284,7 @@ export default function AssessorDashboard() {
   const [companyFilter, setCompanyFilter] = useState('All');
   const [selectedSession, setSelectedSession] = useState(null);
   const [downloadingSessionId, setDownloadingSessionId] = useState('');
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, sessionId: null, newGrade: null });
   const token = useAuthStore(state => state.token);
 
   useEffect(() => {
@@ -261,7 +302,15 @@ export default function AssessorDashboard() {
     void fetchAssignedSessions();
   }, [token]);
 
-  const handleGradeChange = async (sessionId, newGrade) => {
+  const initiateGradeChange = (sessionId, newGrade) => {
+    if (newGrade === 'Pending') return;
+    setConfirmModal({ isOpen: true, sessionId, newGrade });
+  };
+
+  const confirmGradeChange = async () => {
+    const { sessionId, newGrade } = confirmModal;
+    setConfirmModal({ isOpen: false, sessionId: null, newGrade: null });
+    
     try {
       const { data } = await api.put(
         `/assessor/sessions/${sessionId}/grade`,
@@ -472,8 +521,8 @@ export default function AssessorDashboard() {
                         <div className="min-w-28">
                           <GradeSelect
                             value={session.finalGrade}
-                            onChange={(value) => handleGradeChange(session._id, value)}
-                            disabled={loading}
+                            onChange={(value) => initiateGradeChange(session._id, value)}
+                            disabled={loading || session.finalGrade !== 'Pending'}
                           />
                         </div>
                       </div>
@@ -492,6 +541,13 @@ export default function AssessorDashboard() {
         token={token}
         onDownload={() => handleSessionDownload(selectedSession)}
         downloadBusy={downloadingSessionId === selectedSession?._id}
+      />
+      
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, sessionId: null, newGrade: null })}
+        onConfirm={confirmGradeChange}
+        newGrade={confirmModal.newGrade}
       />
     </div>
   );

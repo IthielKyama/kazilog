@@ -43,8 +43,8 @@ router.get('/supervisor', authorize('supervisor'), getSupervisorLogs);
 router.get('/supervisor/sessions', authorize('supervisor'), getSupervisorSessions);
 router.put('/:id/review', authorize('supervisor'), reviewLog);
 
-// Assessor & Supervisor routes
-router.get('/session/:sessionId/export', authorize('supervisor', 'assessor', 'admin'), exportSessionLogsPdf);
-router.get('/session/:sessionId', authorize('supervisor', 'assessor', 'admin'), getSessionLogs);
+// Assessor, Supervisor, Admin, & Student routes
+router.get('/session/:sessionId/export', authorize('supervisor', 'assessor', 'admin', 'student'), exportSessionLogsPdf);
+router.get('/session/:sessionId', authorize('supervisor', 'assessor', 'admin', 'student'), getSessionLogs);
 
 module.exports = router;
